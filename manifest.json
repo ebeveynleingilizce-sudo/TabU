@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "TabU — Gitar TAB çalışma alanı",
+  "short_name": "TabU",
+  "description": "Gitar TAB öğren. Çal. Ustalaş.",
+  "lang": "tr",
+  "start_url": "./index.html#home",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#090a10",
+  "theme_color": "#090a10",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

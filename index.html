@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090a10"><meta name="description" content="Gitar TAB öğren. Çal. Ustalaş.">
+  <link rel="manifest" href="manifest.json"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+  <title>TabU — Gitar TAB çalışma alanı</title>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#home" aria-label="TabU ana sayfa"><span class="brand-mark">T<span>♩</span></span><span>TABU<small>GİTAR ÇALIŞMA ALANI</small></span></a>
+      <div class="side-label">MENÜ</div>
+      <nav class="side-nav" aria-label="Ana menü">
+        <button data-route="home" class="nav-item"><span>⌂</span>Ana Sayfa</button><button data-route="practice" class="nav-item active"><span>♫</span>Tab Çalış</button><button data-route="editor" class="nav-item"><span>✎</span>TAB Düzenle</button><button data-route="learn" class="nav-item"><span>◈</span>Tab Öğren</button><button data-route="training" class="nav-item"><span>◎</span>Antrenman</button><button data-route="progress" class="nav-item"><span>▥</span>İlerlemen</button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="daily-card"><div class="daily-top"><span>BUGÜNÜN HEDEFİ</span><span>✦</span></div><strong>10 <small>dk</small></strong><div class="progress-track"><i id="daily-progress"></i></div><p id="daily-copy">Günün çalışmasına başla</p></div>
+      <div class="profile"><div class="avatar">♪</div><div><b>Gitar yolculuğun</b><small id="profile-xp">0 XP · Seviye 1</small></div><span class="profile-dot"></span></div>
+    </aside>
+    <main class="main-area">
+      <header class="topbar"><button class="mobile-brand" data-route="home">TABU<span>♫</span></button><div class="breadcrumb"><span>ÇALIŞMA ALANI</span><b id="page-title">Tab Çalış</b></div><div class="top-actions"><button class="icon-button" id="install-button" hidden aria-label="Uygulamayı yükle">↓</button><button class="streak-pill"><span>✦</span> <b id="streak-top">0</b> gün seri</button><div class="avatar small-avatar">♪</div></div></header>
+      <div id="view" class="view"></div>
+    </main>
+  </div>
+  <nav class="bottom-nav" aria-label="Alt menü"><button data-route="home"><span>⌂</span>Ana Sayfa</button><button data-route="practice" class="active"><span>♫</span>TAB</button><button data-route="training"><span>◎</span>Antrenman</button><button data-route="progress"><span>▥</span>İlerleme</button></nav>
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="app/main.js"></script>
+</body>
+</html>

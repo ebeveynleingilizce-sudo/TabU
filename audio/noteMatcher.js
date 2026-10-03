@@ -1,0 +1,4 @@
+const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+export function frequencyToNote(frequency){if(!Number.isFinite(frequency)||frequency<=0)return null;const midi=Math.round(69+12*Math.log2(frequency/440));const hz=440*2**((midi-69)/12);return {name:names[((midi%12)+12)%12],octave:Math.floor(midi/12)-1,midi,frequency:hz,cents:Math.round(1200*Math.log2(frequency/hz))}}
+export function expectedGuitarNote(string,fret){const open={e:64,B:59,G:55,D:50,A:45,E:40}[string];if(open==null)return null;const midi=open+Number(fret);return {midi,name:names[midi%12],octave:Math.floor(midi/12)-1,frequency:440*2**((midi-69)/12),label:`${names[midi%12]}${Math.floor(midi/12)-1}`}}
+export function matchNote(detected,expected,toleranceCents=45){if(!detected||!expected||!detected.frequency)return false;const pitchClass=((detected.midi%12)+12)%12===((expected.midi%12)+12)%12;return pitchClass&&Math.abs(detected.cents||0)<=toleranceCents}
