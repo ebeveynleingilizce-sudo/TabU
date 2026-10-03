@@ -1,5 +1,6 @@
-const CACHE='tabu-shell-v50';
+const CACHE='tabu-shell-v51';
 const FILES=['./','./index.html','./styles.css','./manifest.json','./app/main.js','./app/data.js','./app/state.js','./app/router.js','./tab/tabParser.js','./tab/tabPlayer.js','./tab/tabRenderer.js?v=14','./practice/practiceEngine.js','./practice/exerciseGenerator.js','./audio/microphone.js','./audio/pitchDetector.js','./audio/noteMatcher.js','./audio/guitarSynth.js','./icons/icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);if(url.origin!==location.origin)return;event.respondWith(fetch(event.request).then(response=>{if(response.ok){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy))}return response}).catch(()=>caches.match(event.request).then(cached=>cached||caches.match('./index.html'))))});
+
