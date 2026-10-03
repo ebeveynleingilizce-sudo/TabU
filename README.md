@@ -15,8 +15,8 @@ Ardından `http://localhost:8000` adresini açın. Alternatif olarak VS Code Liv
 ## İçerik
 
 - TAB oynatıcı, tempo kontrolü, metronom ve çalışma modları
-- 7 hazır egzersiz, 8 mini ders, rastgele nota antrenmanı
-- Kullanıcı tarafından düzenlenebilir TAB alanı
+- 7 hazır egzersiz ve 8 mini ders
+- Hazır ve kullanıcı tarafından oluşturulan TAB’ları düzenleme ve yerel kaydetme
 - LocalStorage tabanlı ilerleme ve XP
 - Web Audio mikrofon, frekans algılama ve nota eşleştirme servisleri
 - Uygulama kabuğu için service worker, manifest ve SVG ikon
