@@ -1,4 +1,4 @@
-const CACHE='tabu-shell-v58';
+const CACHE='tabu-shell-v59';
 const FILES=['./','./index.html','./styles.css','./manifest.json','./app/main.js','./app/data.js','./app/state.js','./app/router.js','./tab/tabParser.js','./tab/tabPlayer.js','./tab/tabRenderer.js?v=14','./practice/practiceEngine.js','./practice/exerciseGenerator.js','./audio/microphone.js','./audio/pitchDetector.js','./audio/noteMatcher.js','./audio/timeline.js','./audio/guitarSynth.js','./icons/icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
