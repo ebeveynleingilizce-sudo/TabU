@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {STANDARD_TUNING,stringFretToMidi,expectedGuitarNote,midiToFrequency,frequencyToMidi,frequencyToNote,centsDifference,matchNote,PITCH_TOLERANCE_CENTS} from '../audio/noteMatcher.js';
-import {detectPitch,PitchStabilizer} from '../audio/pitchDetector.js';
+import {detectPitch,PitchStabilizer,GuitarOnsetDetector} from '../audio/pitchDetector.js';
 
 const close=(actual,expected,tolerance)=>assert.ok(Math.abs(actual-expected)<=tolerance,`${actual} != ${expected}`);
 
@@ -65,3 +65,31 @@ test('harmonic octave jumps reset the stability window instead of causing a matc
 });
 
 
+
+test('one physical string attack creates one onset while its tone rings for two seconds',()=>{
+  const detector=new GuitarOnsetDetector({minRms:.02,riseRatio:1.5,refractoryMs:150});
+  assert.equal(detector.push(.004,0),false);
+  assert.equal(detector.push(.065,20),true);
+  let laterOnsets=0;
+  for(let time=36;time<=2036;time+=16)if(detector.push(.065,time))laterOnsets++;
+  assert.equal(laterOnsets,0);
+});
+test('ambient low-level noise does not create a guitar onset',()=>{
+  const detector=new GuitarOnsetDetector({minRms:.02,riseRatio:1.5});
+  let onsets=0;
+  for(let time=0;time<2000;time+=16)if(detector.push(.009+Math.sin(time)*.002,time))onsets++;
+  assert.equal(onsets,0);
+});
+test('brief unstable pitch is ignored until the expected pitch stabilizes',()=>{
+  const stabilizer=new PitchStabilizer({frames:3,cents:55,minRms:.012,minConfidence:.72}),f=(frequency)=>({frequency,confidence:.94,level:.08});
+  assert.equal(stabilizer.push(f(369.99)).frequency,null);
+  assert.equal(stabilizer.push(f(392)).frequency,null);
+  assert.equal(stabilizer.push(f(392)).frequency,null);
+  assert.equal(stabilizer.push(f(392)).frequency,392);
+});
+test('a fresh pluck can retrigger while the previous string tone still rings',()=>{
+  const detector=new GuitarOnsetDetector({minRms:.02,riseRatio:1.3,retriggerRatio:1.28,refractoryMs:150});
+  assert.equal(detector.push(.05,0),true);
+  for(let time=16;time<=480;time+=16)assert.equal(detector.push(.05,time),false);
+  assert.equal(detector.push(.085,500),true);
+});

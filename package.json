@@ -1,5 +1,31 @@
 {
   "type": "module",
-  "scripts": { "test": "node --test" }
+  "scripts": {
+    "test": "node --test",
+    "test:all": "npm test && npm run test:e2e",
+    "test:safari": "playwright test --project=iphone-webkit",
+    "test:e2e": "playwright test",
+    "test:mobile": "playwright test --project=android-small --project=phone-standard --project=phone-large --project=iphone-webkit"
+  },
+  "name": "tabu",
+  "version": "1.0.0",
+  "description": "Mobil öncelikli, statik ve framework kullanmayan gitar TAB çalışma prototipi.",
+  "main": "service-worker.js",
+  "directories": {
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ebeveynleingilizce-sudo/TabU.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ebeveynleingilizce-sudo/TabU/issues"
+  },
+  "homepage": "https://github.com/ebeveynleingilizce-sudo/TabU#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
 }
-

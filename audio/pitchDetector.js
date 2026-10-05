@@ -25,3 +25,25 @@ export class PitchStabilizer{
   }
 }
 
+
+export class GuitarOnsetDetector{
+  constructor({minRms=.02,riseRatio=1.3,refractoryMs=150,releaseRatio=.72,quietMs=70,retriggerRatio=1.28,decayMs=850}={}){
+    this.minRms=minRms;this.riseRatio=riseRatio;this.refractoryMs=refractoryMs;this.releaseRatio=releaseRatio;this.quietMs=quietMs;this.retriggerRatio=retriggerRatio;this.decayMs=decayMs;this.reset()
+  }
+  reset(){this.previousLevel=0;this.peakLevel=0;this.lastSampleAt=null;this.lastOnset=-Infinity;this.quietSince=null;this.armed=true}
+  push(level,now=performance.now()){
+    if(!Number.isFinite(level)||level<0)return false;
+    if(level<this.minRms){
+      this.quietSince??=now;
+      if(now-this.quietSince>=this.quietMs){this.armed=true;this.peakLevel=0}
+      this.previousLevel=level;this.lastSampleAt=now;return false
+    }
+    this.quietSince=null;
+    const elapsed=this.lastSampleAt===null?0:Math.max(0,now-this.lastSampleAt),envelope=this.peakLevel?this.peakLevel*Math.exp(-elapsed/this.decayMs):level;
+    const rising=level>=this.minRms&&(this.previousLevel<this.minRms||level>=this.previousLevel*this.riseRatio);
+    if(!this.armed&&now-this.lastOnset>=this.refractoryMs&&(level<=envelope*this.releaseRatio||(rising&&level>=envelope*this.retriggerRatio)))this.armed=true;
+    this.peakLevel=Math.max(level,envelope);this.previousLevel=level;this.lastSampleAt=now;
+    if(!this.armed||!rising||now-this.lastOnset<this.refractoryMs)return false;
+    this.armed=false;this.lastOnset=now;this.peakLevel=level;return true
+  }
+}
