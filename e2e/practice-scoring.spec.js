@@ -23,6 +23,8 @@ test('microphone pitch colors correct, wrong and missed TAB notes and summarizes
   }])));
   await page.reload();await page.locator('#exercise-select').selectOption('custom-e2e-score');
   await page.locator('[data-action="take-turn"]').click();
+  await expect(page.locator('.classroom-meter')).toBeVisible();
+  await expect.poll(()=>page.locator('#mic-meter').evaluate(element=>parseFloat(element.style.width)||0)).toBeGreaterThan(0);
   await expect(page.locator('.time-note[data-index="0"]')).toHaveClass(/correct/,{timeout:4000});
   await page.evaluate(()=>window.__micFrequency=0);
   await page.waitForTimeout(220);
@@ -63,6 +65,8 @@ test('a sustained two-second guitar tone does not answer the following TAB note'
   }])));
   await page.reload();await page.locator('#exercise-select').selectOption('custom-sustained-score');
   await page.locator('[data-action="take-turn"]').click();
+  await expect(page.locator('.classroom-meter')).toBeVisible();
+  await expect.poll(()=>page.locator('#mic-meter').evaluate(element=>parseFloat(element.style.width)||0)).toBeGreaterThan(0);
   await expect(page.locator('.time-note[data-index="0"]')).toHaveClass(/correct/,{timeout:4000});
   await expect(page.locator('.practice-result')).toBeVisible({timeout:5000});
   await expect(page.locator('.practice-result')).toContainText('1 doğru');
