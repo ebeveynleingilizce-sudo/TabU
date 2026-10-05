@@ -73,3 +73,35 @@ test('a sustained two-second guitar tone does not answer the following TAB note'
   await expect(page.locator('.practice-result')).toContainText('0 yanlış');
   await expect(page.locator('.practice-result')).toContainText('1 boş');
 });
+
+test('microphone scoring follows the TAB clock at 0.5x speed',async({page,browserName})=>{
+  test.skip(browserName==='webkit','WebKit does not supply a stable synthetic analyser stream.');
+  await page.addInitScript(()=>{
+    window.__micFrequency=329.63;
+    Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:async()=>({getTracks:()=>[]})}});
+    window.AudioContext=class{
+      constructor(){this.sampleRate=44100;this.state='running'}
+      async resume(){}
+      async close(){}
+      createMediaStreamSource(){return {connect(){}}}
+      createAnalyser(){return {fftSize:4096,smoothingTimeConstant:0,getFloatTimeDomainData(buffer){
+        const frequency=window.__micFrequency,amplitude=frequency ? .12 : 0;
+        for(let index=0;index<buffer.length;index++)buffer[index]=amplitude*Math.sin(2*Math.PI*frequency*index/44100)
+      }}}
+    };
+  });
+  await page.goto('/#practice');
+  await page.evaluate(()=>localStorage.setItem('tabu-custom-tabs',JSON.stringify([{
+    id:'custom-half-speed-score',title:'Half Speed E2E',difficulty:'Test',bpm:100,duration:'test',description:'',
+    data:{e:[{fret:0,startTime:0},{fret:1,startTime:1},{fret:3,startTime:2}],B:[],G:[],D:[],A:[],E:[]}
+  }])));
+  await page.reload();await page.locator('#exercise-select').selectOption('custom-half-speed-score');
+  await page.locator('#audio-speed-select').selectOption('0.5');
+  await page.locator('[data-action="take-turn"]').click();
+  await expect(page.locator('.time-note[data-index="0"]')).toHaveClass(/correct/,{timeout:4000});
+  await page.evaluate(()=>window.__micFrequency=0);
+  await page.waitForTimeout(220);
+  await expect(page.locator('.time-note[data-index="1"]')).toHaveClass(/active/,{timeout:5000});
+  await page.evaluate(()=>window.__micFrequency=349.23);
+  await expect(page.locator('.time-note[data-index="1"]')).toHaveClass(/correct/,{timeout:4000});
+});

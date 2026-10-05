@@ -25,7 +25,7 @@ test('frequency conversion and exact octave-aware matching',()=>{
   assert.equal(matchNote(frequencyToNote(371),expected),true);
   assert.equal(matchNote(frequencyToNote(midiToFrequency(66)*2),expected),false,'octave-up F# must fail');
   assert.equal(matchNote(frequencyToNote(midiToFrequency(66)/2),expected),false,'octave-down F# must fail');
-  assert.equal(PITCH_TOLERANCE_CENTS,35);assert.ok(Math.abs(centsDifference(371,expected.frequency))<35);
+  assert.equal(PITCH_TOLERANCE_CENTS,49);assert.ok(Math.abs(centsDifference(371,expected.frequency))<49);
 });
 test('wrong note and octave are rejected; tuning tolerance is bounded in cents',()=>{
   const expected=expectedGuitarNote(1,0),e4=midiToFrequency(64);
@@ -35,8 +35,8 @@ test('wrong note and octave are rejected; tuning tolerance is bounded in cents',
   assert.equal(matchNote(frequencyToNote(midiToFrequency(52)),expected),false,'E3 must fail');
   assert.equal(matchNote(frequencyToNote(midiToFrequency(76)),expected),false,'E5 must fail');
   assert.equal(matchNote(frequencyToNote(midiToFrequency(40)),expected),false,'E2 must fail');
-  assert.equal(matchNote(frequencyToNote(e4*2**(34/1200)),expected),true,'inside ±35 cents');
-  assert.equal(matchNote(frequencyToNote(e4*2**(36/1200)),expected),false,'outside ±35 cents');
+  assert.equal(matchNote(frequencyToNote(e4*2**(48/1200)),expected),true,'inside ±49 cents');
+  assert.equal(matchNote(frequencyToNote(e4*2**(51/1200)),expected),false,'outside ±49 cents');
   assert.equal(matchNote(null,expected),false);
 });
 test('YIN pitch detector handles guitar fundamentals, harmonics and silence',()=>{
@@ -92,4 +92,9 @@ test('a fresh pluck can retrigger while the previous string tone still rings',()
   assert.equal(detector.push(.05,0),true);
   for(let time=16;time<=480;time+=16)assert.equal(detector.push(.05,time),false);
   assert.equal(detector.push(.085,500),true);
+});
+test('microphone attacks near the pitch detection floor still produce an onset',()=>{
+  const detector=new GuitarOnsetDetector({minRms:.012,riseRatio:1.3});
+  assert.equal(detector.push(.004,0),false);
+  assert.equal(detector.push(.016,20),true);
 });

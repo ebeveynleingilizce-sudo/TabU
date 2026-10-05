@@ -1,5 +1,5 @@
 import {detectPitch,PitchStabilizer,GuitarOnsetDetector} from './pitchDetector.js';import {frequencyToNote,PITCH_TOLERANCE_CENTS} from './noteMatcher.js';
-export const MICROPHONE_CONFIG=Object.freeze({fftSize:4096,decimation:4,minRms:.012,minConfidence:.72,stableFrames:5,stableCents:55,attackRms:.02,attackRatio:1.3,onsetWindowMs:420});
+export const MICROPHONE_CONFIG=Object.freeze({fftSize:4096,decimation:4,minRms:.012,minConfidence:.72,stableFrames:5,stableCents:55,attackRms:.012,attackRatio:1.3,onsetWindowMs:420});
 export class MicrophoneInput{
   constructor(onFrame,config=MICROPHONE_CONFIG){this.onFrame=onFrame;this.config=config;this.context=null;this.stream=null;this.raf=0;this.buffer=null;this.downsampled=null;this.stabilizer=new PitchStabilizer({frames:config.stableFrames,cents:config.stableCents,minRms:config.minRms,minConfidence:config.minConfidence});this.onsetDetector=new GuitarOnsetDetector({minRms:config.attackRms,riseRatio:config.attackRatio});this.onsetSequence=0;this.deliveredOnsetSequence=0;this.lastOnsetAt=null}
   async start(){

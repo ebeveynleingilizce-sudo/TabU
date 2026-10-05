@@ -7,7 +7,7 @@ export const STANDARD_TUNING=Object.freeze({
   5:Object.freeze({string:5,key:'A',note:'A2',midi:45}),
   6:Object.freeze({string:6,key:'E',note:'E2',midi:40})
 });
-export const PITCH_TOLERANCE_CENTS=35;
+export const PITCH_TOLERANCE_CENTS=49;
 const STRING_NUMBER={e:1,B:2,G:3,D:4,A:5,E:6};
 export function midiToFrequency(midi){return Number.isFinite(midi)&&midi>=0?440*2**((midi-69)/12):null}
 export function stringFretToMidi(string,fret){const stringNumber=typeof string==='number'?string:STRING_NUMBER[string],open=STANDARD_TUNING[stringNumber]?.midi;if(!Number.isInteger(stringNumber)||!Number.isFinite(open)||!Number.isFinite(Number(fret))||Number(fret)<0)return null;return open+Math.round(Number(fret))}
