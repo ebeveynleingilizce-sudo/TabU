@@ -17,7 +17,7 @@ function microphoneClass(getUserMedia,AudioContext){
   const source=readFileSync(new URL('../audio/microphone.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/,'').replaceAll('export ','');
   return vm.runInNewContext(source+'\nMicrophoneInput',{
     navigator:{mediaDevices:{getUserMedia}},AudioContext,
-    PitchStabilizer:class{reset(){}},GuitarOnsetDetector:class{push(){return false}reset(){}},cancelAnimationFrame(){},requestAnimationFrame(){return 1}
+    PitchStabilizer:class{reset(){}},GuitarOnsetDetector:class{push(){return false}reset(){}},GuitarNoteOnsetTracker:class{push(){return {newOnset:false,onsetAgeMs:Infinity,onsetId:0}}reset(){}},cancelAnimationFrame(){},requestAnimationFrame(){return 1}
   });
 }
 

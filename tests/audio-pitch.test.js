@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {STANDARD_TUNING,stringFretToMidi,expectedGuitarNote,midiToFrequency,frequencyToMidi,frequencyToNote,centsDifference,matchNote,PITCH_TOLERANCE_CENTS} from '../audio/noteMatcher.js';
-import {detectPitch,PitchStabilizer,GuitarOnsetDetector} from '../audio/pitchDetector.js';
+import {detectPitch,PitchStabilizer,GuitarOnsetDetector,GuitarNoteOnsetTracker} from '../audio/pitchDetector.js';
 
 const close=(actual,expected,tolerance)=>assert.ok(Math.abs(actual-expected)<=tolerance,`${actual} != ${expected}`);
 
@@ -97,4 +97,15 @@ test('microphone attacks near the pitch detection floor still produce an onset',
   const detector=new GuitarOnsetDetector({minRms:.012,riseRatio:1.3});
   assert.equal(detector.push(.004,0),false);
   assert.equal(detector.push(.016,20),true);
+});
+
+test('stable legato fret changes create a fresh onset without an amplitude attack',()=>{
+  const tracker=new GuitarNoteOnsetTracker({windowMs:420});
+  assert.equal(tracker.push({stableMidi:64,signal:true,physicalOnset:true},100).newOnset,true);
+  assert.equal(tracker.push({stableMidi:64,signal:true},116).newOnset,false,'a ringing sustained note is not counted twice');
+  const legato=tracker.push({stableMidi:65,signal:true,pitchChangeAt:184},200);
+  assert.equal(legato.newOnset,true,'a fret change counts even when the prior onset is still recent');
+  assert.equal(legato.onsetAgeMs,16,'scoring uses the start of the pitch change, not the later stabilization frame');
+  assert.equal(tracker.push({stableMidi:65,signal:true},216).newOnset,false,'the changed note is counted once');
+  assert.equal(tracker.push({stableMidi:67,signal:true,physicalOnset:true},250).newOnset,true,'a physical pluck and pitch change share one onset');
 });

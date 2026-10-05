@@ -18,10 +18,10 @@ export function detectPitch(buffer,sampleRate,config=PITCH_DETECTION_CONFIG){
 export class PitchStabilizer{
   constructor({frames=STABILIZATION_CONFIG.frames,cents=STABILIZATION_CONFIG.cents,minRms=PITCH_DETECTION_CONFIG.minRms,minConfidence=PITCH_DETECTION_CONFIG.minConfidence}={}){this.frames=frames;this.cents=cents;this.minRms=minRms;this.minConfidence=minConfidence;this.samples=[];this.midi=null}
   reset(){this.samples=[];this.midi=null}
-  push(result){const frequency=result?.frequency,confidence=result?.confidence??0,level=result?.level??0;if(!Number.isFinite(frequency)||frequency<=0||level<this.minRms||confidence<this.minConfidence){this.reset();return {...result,frequency:null,stableFrequency:null,stableFrames:0,signal:false}}
+  push(result){const frequency=result?.frequency,confidence=result?.confidence??0,level=result?.level??0;if(!Number.isFinite(frequency)||frequency<=0||level<this.minRms||confidence<this.minConfidence){this.reset();return {...result,frequency:null,stableFrequency:null,stableFrames:0,candidateMidi:null,signal:false}}
     const midi=Math.round(69+12*Math.log2(frequency/440));if(this.midi!==midi)this.reset();else if(this.samples.length){const center=this.samples.slice().sort((a,b)=>a-b)[Math.floor(this.samples.length/2)],cents=Math.abs(1200*Math.log2(frequency/center));if(cents>this.cents)this.reset()}
     this.midi=midi;this.samples.push(frequency);if(this.samples.length>this.frames)this.samples.shift();const sorted=this.samples.slice().sort((a,b)=>a-b),stableFrequency=sorted[Math.floor(sorted.length/2)],stable=this.samples.length>=this.frames;
-    return {...result,frequency:stable?stableFrequency:null,stableFrequency:stable?stableFrequency:null,stableFrames:this.samples.length,signal:true}
+    return {...result,frequency:stable?stableFrequency:null,stableFrequency:stable?stableFrequency:null,stableFrames:this.samples.length,candidateMidi:this.midi,signal:true}
   }
 }
 
@@ -45,5 +45,23 @@ export class GuitarOnsetDetector{
     this.peakLevel=Math.max(level,envelope);this.previousLevel=level;this.lastSampleAt=now;
     if(!this.armed||!rising||now-this.lastOnset<this.refractoryMs)return false;
     this.armed=false;this.lastOnset=now;this.peakLevel=level;return true
+  }
+}
+
+export class GuitarNoteOnsetTracker{
+  constructor({windowMs=420}={}){this.windowMs=windowMs;this.reset()}
+  reset(){this.sequence=0;this.deliveredSequence=0;this.lastOnsetAt=null;this.lastStableMidi=null}
+  push({stableMidi=null,signal=false,physicalOnset=false,pitchChangeAt=null}={},now=performance.now()){
+    if(physicalOnset){this.sequence++;this.lastOnsetAt=now}
+    if(!signal)this.lastStableMidi=null;
+    if(Number.isInteger(stableMidi)){
+      // A legato fret change may have no fresh amplitude attack. Emit one
+      // onset when the new pitch stabilizes, unless a physical attack is queued.
+      if(this.lastStableMidi!==null&&stableMidi!==this.lastStableMidi&&this.sequence<=this.deliveredSequence){this.sequence++;this.lastOnsetAt=Number.isFinite(pitchChangeAt)?pitchChangeAt:now}
+      this.lastStableMidi=stableMidi
+    }
+    const onsetAgeMs=this.lastOnsetAt===null?Infinity:Math.max(0,now-this.lastOnsetAt),newOnset=Number.isInteger(stableMidi)&&this.sequence>this.deliveredSequence&&onsetAgeMs<=this.windowMs;
+    if(newOnset)this.deliveredSequence=this.sequence;else if(onsetAgeMs>this.windowMs)this.deliveredSequence=this.sequence;
+    return {newOnset,onsetAgeMs,onsetId:this.sequence}
   }
 }
