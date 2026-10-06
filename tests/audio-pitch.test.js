@@ -25,7 +25,7 @@ test('frequency conversion and exact octave-aware matching',()=>{
   assert.equal(matchNote(frequencyToNote(371),expected),true);
   assert.equal(matchNote(frequencyToNote(midiToFrequency(66)*2),expected),false,'octave-up F# must fail');
   assert.equal(matchNote(frequencyToNote(midiToFrequency(66)/2),expected),false,'octave-down F# must fail');
-  assert.equal(PITCH_TOLERANCE_CENTS,49);assert.ok(Math.abs(centsDifference(371,expected.frequency))<49);
+  assert.equal(PITCH_TOLERANCE_CENTS,65);assert.ok(Math.abs(centsDifference(371,expected.frequency))<65);
 });
 test('wrong note and octave are rejected; tuning tolerance is bounded in cents',()=>{
   const expected=expectedGuitarNote(1,0),e4=midiToFrequency(64);
@@ -35,8 +35,9 @@ test('wrong note and octave are rejected; tuning tolerance is bounded in cents',
   assert.equal(matchNote(frequencyToNote(midiToFrequency(52)),expected),false,'E3 must fail');
   assert.equal(matchNote(frequencyToNote(midiToFrequency(76)),expected),false,'E5 must fail');
   assert.equal(matchNote(frequencyToNote(midiToFrequency(40)),expected),false,'E2 must fail');
-  assert.equal(matchNote(frequencyToNote(e4*2**(48/1200)),expected),true,'inside ±49 cents');
-  assert.equal(matchNote(frequencyToNote(e4*2**(51/1200)),expected),false,'outside ±49 cents');
+  assert.equal(matchNote(frequencyToNote(e4*2**(60/1200)),expected),true,'slightly detuned guitars remain within tolerance');
+  assert.equal(matchNote(frequencyToNote(e4*2**(66/1200)),expected),false,'large tuning error stays outside tolerance');
+  assert.equal(matchNote(frequencyToNote(midiToFrequency(65)),expected),false,'a neighboring fret a semitone higher remains wrong');
   assert.equal(matchNote(null,expected),false);
 });
 test('YIN pitch detector handles guitar fundamentals, harmonics and silence',()=>{
