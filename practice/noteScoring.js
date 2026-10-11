@@ -17,8 +17,18 @@ export function pendingNoteAtTime(events,time,statuses){
   }
   return -1;
 }
+export function nearestScorableNoteAtTime(events,time,statuses,predicate=()=>true){
+  let nearest=-1,distance=Infinity;
+  for(let index=0;index<events.length;index++){
+    if(statuses[index]!==NOTE_STATUS.PENDING&&statuses[index]!==NOTE_STATUS.MISSED)continue;
+    if(!predicate(events[index],index))continue;
+    const eventTime=targetTime(events[index]);if(!Number.isFinite(eventTime))continue;
+    const candidate=Math.abs(eventTime-time);if(candidate<distance){nearest=index;distance=candidate}
+  }
+  return nearest;
+}
 export function resolveNoteStatus(statuses,index,result){
-  if(index<0||index>=statuses.length||statuses[index]!==NOTE_STATUS.PENDING)return false;
+  if(index<0||index>=statuses.length||(statuses[index]!==NOTE_STATUS.PENDING&&statuses[index]!==NOTE_STATUS.MISSED))return false;
   if(result!==NOTE_STATUS.CORRECT&&result!==NOTE_STATUS.WRONG)return false;
   statuses[index]=result;return true;
 }
