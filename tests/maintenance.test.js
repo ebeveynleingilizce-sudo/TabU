@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {parseTab} from '../tab/tabParser.js';
 import {PracticeClock} from '../audio/practiceClock.js';
+import {nearestScorableNoteAtTime,resolveNoteStatus} from '../practice/noteScoring.js';
+import {expectedGuitarNote,matchNote} from '../audio/noteMatcher.js';
 
 const main=readFileSync(new URL('../app/main.js',import.meta.url),'utf8');
 
@@ -59,13 +61,34 @@ test('a stabilized onset reads the shared clock and resolves a note once',()=>{
     MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:[{startTime:0,notes:[{string:'e',fret:0}]}],
     activeTab:{events:[{notes:[{string:'e',fret:0}]}]},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,
     NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},isQualifiedGuitarOnset(){return true},
-    pendingNoteAtTime(){return statuses[0]==='PENDING'?0:-1},resolveNoteStatus(list,index,result){if(list[index]!=='PENDING')return false;list[index]=result;return true},
-    settlePracticeNotes(){return 0},allStatusesResolved(){return false},updateAudioDebug(){},expectedGuitarNote(){return {midi:64,frequency:329.63}},
-    matchNote(){return true},currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
+    nearestScorableNoteAtTime,resolveNoteStatus,
+    settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},updateAudioDebug(){},
+    matchNote,expectedGuitarNote,currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
   vm.runInNewContext(source+'\nhandleLivePitch({level:.1,note:{midi:64,frequency:329.63},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});',context);
   observed=practiceClock.getMusicalTime();
   assert.equal(observed,1.25);assert.equal(statuses[0],'CORRECT');assert.equal(context.sessionCorrect,1);
-});test('fresh worker install caches every versioned module requested by the app',async()=>{
+});
+
+test('a correct late onset can resolve a missed note while a wrong fret stays wrong',()=>{
+  const source=main.slice(main.indexOf('function handleLivePitch('),main.indexOf('async function toggleMic('));
+  const events=[{startTime:0,notes:[{string:'e',fret:0}]},{startTime:1,notes:[{string:'e',fret:1}]}];
+  const statuses=['MISSED','PENDING'],practiceClock=new PracticeClock();practiceClock.seek(1.1);
+  const context={state:{route:'practice',running:true,step:1},liveTracking:true,practicePhase:'playing',micFrame:null,
+    MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:events,
+    activeTab:{events},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},
+    isQualifiedGuitarOnset(){return true},nearestScorableNoteAtTime,resolveNoteStatus,settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},
+    updateAudioDebug(){},expectedGuitarNote,matchNote,currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
+  vm.runInNewContext(source+`\nhandleLivePitch({level:.1,note:{midi:64,frequency:329.63,detectedFrequency:329.63},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});`,context);
+  assert.equal(statuses[0],'CORRECT','the matching earlier note should turn green even after its timing window');
+  assert.equal(statuses[1],'PENDING','the next note should remain untouched');
+  const wrongContext={...context,liveStatuses:['PENDING','PENDING'],practiceClock:new PracticeClock(),sessionCorrect:0,sessionWrong:0};
+  wrongContext.practiceClock.seek(1.1);
+  vm.runInNewContext(source+`\nhandleLivePitch({level:.1,note:{midi:66,frequency:369.99,detectedFrequency:369.99},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});`,wrongContext);
+  assert.equal(wrongContext.liveStatuses[1],'WRONG','a neighboring fret must not be accepted as correct');
+  assert.equal(wrongContext.liveStatuses[0],'PENDING','unrelated notes must remain untouched');
+});
+
+test('fresh worker install caches every versioned module requested by the app',async()=>{
   const handlers={},cached=new Set(),base='https://example.test/TabU/';
   vm.runInNewContext(readFileSync(new URL('../service-worker.js',import.meta.url),'utf8'),{
     self:{addEventListener(type,handler){handlers[type]=handler},skipWaiting(){}},

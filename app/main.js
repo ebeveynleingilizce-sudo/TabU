@@ -87,7 +87,7 @@ function handleLivePitch(frame){
   micFrame=frame;updateAudioDebug(frame);
   if(!isQualifiedGuitarOnset(frame,MICROPHONE_CONFIG)){micMatch=frame.level<MICROPHONE_CONFIG.minRms?'NO SIGNAL':'UNSTABLE';updateAudioDebug(frame,micMatch);return}
   if(!frame.newOnset)return;
-  const now=practiceClock.getMusicalTime(),onsetAge=Math.max(0,(frame.onsetAgeMs||0)/1000)*(practiceClock.rate||1),onsetTime=now-onsetAge,index=nearestScorableNoteAtTime(practiceClockEvents,onsetTime,liveStatuses);
+  const now=practiceClock.getMusicalTime(),onsetAge=Math.max(0,(frame.onsetAgeMs||0)/1000)*(practiceClock.rate||1),onsetTime=now-onsetAge;let index=nearestScorableNoteAtTime(practiceClockEvents,onsetTime,liveStatuses);
   if(index<0){settlePracticeNotes(now);if(canFinishLivePractice(now))finishPractice();return}
   let event=activeTab?.events[index],note=event?.notes.length===1?event.notes[0]:null;if(!note)return;
   let expected=expectedGuitarNote(note.string,note.fret),result=matchNote(frame.note,expected)?NOTE_STATUS.CORRECT:NOTE_STATUS.WRONG;
