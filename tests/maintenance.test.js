@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {parseTab} from '../tab/tabParser.js';
 import {PracticeClock} from '../audio/practiceClock.js';
-import {nearestScorableNoteAtTime,resolveNoteStatus} from '../practice/noteScoring.js';
+import {noteUnderPlayheadAtTime,resolveNoteStatus} from '../practice/noteScoring.js';
 import {expectedGuitarNote,matchNote} from '../audio/noteMatcher.js';
 
 const main=readFileSync(new URL('../app/main.js',import.meta.url),'utf8');
@@ -58,10 +58,10 @@ test('a stabilized onset reads the shared clock and resolves a note once',()=>{
   let observed;
   const statuses=['PENDING'],practiceClock=new PracticeClock();practiceClock.seek(1.25);
   const context={state:{route:'practice',running:true,step:0},liveTracking:true,practicePhase:'playing',micFrame:null,
-    MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:[{startTime:0,notes:[{string:'e',fret:0}]}],
-    activeTab:{events:[{notes:[{string:'e',fret:0}]}]},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,
+    MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:[{startTime:1.25,notes:[{string:'e',fret:0}]}],
+    activeTab:{events:[{startTime:1.25,notes:[{string:'e',fret:0}]}]},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,
     NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},isQualifiedGuitarOnset(){return true},
-    nearestScorableNoteAtTime,resolveNoteStatus,
+    noteUnderPlayheadAtTime,resolveNoteStatus,document:{querySelector(){return {clientWidth:440}}},
     settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},updateAudioDebug(){},
     matchNote,expectedGuitarNote,currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
   vm.runInNewContext(source+'\nhandleLivePitch({level:.1,note:{midi:64,frequency:329.63},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});',context);
@@ -69,23 +69,23 @@ test('a stabilized onset reads the shared clock and resolves a note once',()=>{
   assert.equal(observed,1.25);assert.equal(statuses[0],'CORRECT');assert.equal(context.sessionCorrect,1);
 });
 
-test('a correct late onset can resolve a missed note while a wrong fret stays wrong',()=>{
+test('a note scores only while the playhead overlaps its visible number',()=>{
   const source=main.slice(main.indexOf('function handleLivePitch('),main.indexOf('async function toggleMic('));
   const events=[{startTime:0,notes:[{string:'e',fret:0}]},{startTime:1,notes:[{string:'e',fret:1}]}];
-  const statuses=['MISSED','PENDING'],practiceClock=new PracticeClock();practiceClock.seek(1.1);
-  const context={state:{route:'practice',running:true,step:1},liveTracking:true,practicePhase:'playing',micFrame:null,
-    MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:events,
-    activeTab:{events},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},
-    isQualifiedGuitarOnset(){return true},nearestScorableNoteAtTime,resolveNoteStatus,settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},
-    updateAudioDebug(){},expectedGuitarNote,matchNote,currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
-  vm.runInNewContext(source+`\nhandleLivePitch({level:.1,note:{midi:64,frequency:329.63,detectedFrequency:329.63},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});`,context);
-  assert.equal(statuses[0],'CORRECT','the matching earlier note should turn green even after its timing window');
-  assert.equal(statuses[1],'PENDING','the next note should remain untouched');
-  const wrongContext={...context,liveStatuses:['PENDING','PENDING'],practiceClock:new PracticeClock(),sessionCorrect:0,sessionWrong:0};
-  wrongContext.practiceClock.seek(1.1);
-  vm.runInNewContext(source+`\nhandleLivePitch({level:.1,note:{midi:66,frequency:369.99,detectedFrequency:369.99},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});`,wrongContext);
-  assert.equal(wrongContext.liveStatuses[1],'WRONG','a neighboring fret must not be accepted as correct');
-  assert.equal(wrongContext.liveStatuses[0],'PENDING','unrelated notes must remain untouched');
+  const run=(time,pitch)=>{
+    const statuses=['PENDING','PENDING'],practiceClock=new PracticeClock();practiceClock.seek(time);
+    const context={state:{route:'practice',running:true,step:1},liveTracking:true,practicePhase:'playing',micFrame:null,
+      MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:events,
+      activeTab:{events},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},
+      isQualifiedGuitarOnset(){return true},noteUnderPlayheadAtTime,resolveNoteStatus,settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},
+      document:{querySelector(){return {clientWidth:440}}},updateAudioDebug(){},expectedGuitarNote,matchNote,currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
+    vm.runInNewContext(source+`\nhandleLivePitch({level:.1,note:{midi:${pitch},frequency:${pitch===64?'329.63':pitch===65?'349.23':'369.99'},detectedFrequency:${pitch===64?'329.63':pitch===65?'349.23':'369.99'}},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});`,context);
+    return statuses;
+  };
+  assert.deepEqual(run(.6,65),['PENDING','PENDING'],'a different note played before the bar reaches it is ignored');
+  assert.deepEqual(run(.8,64),['PENDING','WRONG'],'a wrong pitch is scored only on the note under the bar');
+  assert.deepEqual(run(.8,65),['PENDING','CORRECT'],'the matching pitch turns green while the bar overlaps the number');
+  assert.deepEqual(run(1.4,66),['PENDING','PENDING'],'the note no longer accepts sound after the bar leaves it');
 });
 
 test('fresh worker install caches every versioned module requested by the app',async()=>{

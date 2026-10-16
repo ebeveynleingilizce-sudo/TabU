@@ -27,6 +27,13 @@ export function nearestScorableNoteAtTime(events,time,statuses,predicate=()=>tru
   }
   return nearest;
 }
+export function noteUnderPlayheadAtTime(events,time,statuses,{scale=42,width=56}={}){
+  const halfWidth=Math.max(0,width)/(2*Math.max(1,scale));
+  return nearestScorableNoteAtTime(events,time,statuses,event=>{
+    const eventTime=targetTime(event);
+    return Number.isFinite(eventTime)&&Math.abs(eventTime-time)<=halfWidth;
+  });
+}
 export function resolveNoteStatus(statuses,index,result){
   if(index<0||index>=statuses.length||(statuses[index]!==NOTE_STATUS.PENDING&&statuses[index]!==NOTE_STATUS.MISSED))return false;
   if(result!==NOTE_STATUS.CORRECT&&result!==NOTE_STATUS.WRONG)return false;
