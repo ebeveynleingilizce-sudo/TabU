@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {STANDARD_TUNING,stringFretToMidi,expectedGuitarNote,midiToFrequency,frequencyToMidi,frequencyToNote,centsDifference,matchNote,PITCH_TOLERANCE_CENTS} from '../audio/noteMatcher.js';
-import {detectPitch,PitchStabilizer,GuitarOnsetDetector,GuitarNoteOnsetTracker} from '../audio/pitchDetector.js';
+import {detectPitch,PitchStabilizer,GuitarOnsetDetector,GuitarNoteOnsetTracker,SpectralFluxDetector} from '../audio/pitchDetector.js';
 
 const close=(actual,expected,tolerance)=>assert.ok(Math.abs(actual-expected)<=tolerance,`${actual} != ${expected}`);
 
@@ -48,6 +48,23 @@ test('YIN pitch detector handles guitar fundamentals, harmonics and silence',()=
   const microphoneConfig=detectPitch(synth(329.63),sampleRate,{minRms:.012,minConfidence:.72});assert.ok(microphoneConfig.frequency,'microphone overrides keep default frequency bounds');close(microphoneConfig.frequency,329.63,3);
   assert.equal(detectPitch(new Float32Array(length),sampleRate).frequency,null);
 });
+test('1024-sample pitch windows still identify low and high guitar notes',()=>{
+  const sampleRate=22050,length=1024;
+  const synth=frequency=>Float32Array.from({length},(_,i)=>.22*Math.sin(2*Math.PI*frequency*i/sampleRate));
+  for(const hz of [82.41,110,329.63,659.25]){const result=detectPitch(synth(hz),sampleRate);assert.ok(result.frequency,`no short-window pitch for ${hz}`);close(result.frequency,hz,hz*.02)}
+});
+test('spectral flux detects a fresh attack and suppresses duplicate transients briefly',()=>{
+  const detector=new SpectralFluxDetector({threshold:.45,refractoryMs:60}),quiet=new Float32Array(24).fill(-30),attack=quiet.slice();
+  assert.equal(detector.push(quiet,0),false);
+  for(let i=3;i<9;i++)attack[i]=-8;
+  assert.equal(detector.push(attack,16),true);
+  const second=attack.slice();for(let i=12;i<18;i++)second[i]=-5;
+  assert.equal(detector.push(second,48),false,'one pluck must not create multiple onsets');
+  assert.equal(detector.push(second,96),false,'unchanged ring-out is not a new attack');
+  const next=second.slice();for(let i=18;i<23;i++)next[i]=-2;
+  assert.equal(detector.push(next,112),true,'a later new attack is detected after refractory time');
+});
+
 test('stabilizer waits for a consistent note and clears on silence',()=>{
   const stabilizer=new PitchStabilizer({frames:5,cents:55,minRms:.012,minConfidence:.72}),pitch={frequency:370,confidence:.95,level:.08};
   for(let i=0;i<4;i++)assert.equal(stabilizer.push(pitch).frequency,null);

@@ -20,22 +20,24 @@ export function pendingNoteAtTime(events,time,statuses){
 export function nearestScorableNoteAtTime(events,time,statuses,predicate=()=>true){
   let nearest=-1,distance=Infinity;
   for(let index=0;index<events.length;index++){
-    if(statuses[index]!==NOTE_STATUS.PENDING&&statuses[index]!==NOTE_STATUS.MISSED)continue;
+    if(statuses[index]!==NOTE_STATUS.PENDING&&statuses[index]!==NOTE_STATUS.MISSED&&statuses[index]!==NOTE_STATUS.WRONG)continue;
     if(!predicate(events[index],index))continue;
     const eventTime=targetTime(events[index]);if(!Number.isFinite(eventTime))continue;
     const candidate=Math.abs(eventTime-time);if(candidate<distance){nearest=index;distance=candidate}
   }
   return nearest;
 }
-export function noteUnderPlayheadAtTime(events,time,statuses,{scale=42,width=56}={}){
+export function noteUnderPlayheadAtTime(events,time,statuses,{scale=42,width=56,latency=0}={}){
   const halfWidth=Math.max(0,width)/(2*Math.max(1,scale));
   return nearestScorableNoteAtTime(events,time,statuses,event=>{
     const eventTime=targetTime(event);
-    return Number.isFinite(eventTime)&&Math.abs(eventTime-time)<=halfWidth;
+    return Number.isFinite(eventTime)&&time>=eventTime-halfWidth&&time<=eventTime+halfWidth+Math.max(0,latency);
   });
 }
 export function resolveNoteStatus(statuses,index,result){
-  if(index<0||index>=statuses.length||(statuses[index]!==NOTE_STATUS.PENDING&&statuses[index]!==NOTE_STATUS.MISSED))return false;
+  if(index<0||index>=statuses.length)return false;
+  const current=statuses[index];if(current===NOTE_STATUS.CORRECT)return false;
+  if(current!==NOTE_STATUS.PENDING&&current!==NOTE_STATUS.MISSED&&!(current===NOTE_STATUS.WRONG&&result===NOTE_STATUS.CORRECT))return false;
   if(result!==NOTE_STATUS.CORRECT&&result!==NOTE_STATUS.WRONG)return false;
   statuses[index]=result;return true;
 }

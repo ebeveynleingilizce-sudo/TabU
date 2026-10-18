@@ -15,6 +15,20 @@ export function detectPitch(buffer,sampleRate,config=PITCH_DETECTION_CONFIG){
   const confidence=Math.max(0,Math.min(1,1-center)),frequency=sampleRate/(best+offset);
   return {frequency:confidence>=config.minConfidence?frequency:null,rawFrequency:frequency,confidence,level};
 }
+export class SpectralFluxDetector{
+  constructor({threshold=.45,refractoryMs=60}={}){this.threshold=threshold;this.refractoryMs=refractoryMs;this.reset()}
+  reset(){this.previous=null;this.lastOnset=-Infinity;this.flux=0}
+  push(spectrum,now=performance.now()){
+    if(!spectrum?.length)return false;
+    const current=Float32Array.from(spectrum,value=>Number.isFinite(value)?10**(value/20):0);
+    let priorEnergy=0,positiveFlux=0;
+    if(this.previous?.length===current.length){for(let i=1;i<current.length;i++){priorEnergy+=this.previous[i];positiveFlux+=Math.max(0,current[i]-this.previous[i])}}
+    this.previous=current;this.flux=priorEnergy>1e-6?positiveFlux/priorEnergy:0;
+    if(this.flux<this.threshold||now-this.lastOnset<this.refractoryMs)return false;
+    this.lastOnset=now;return true;
+  }
+}
+
 export class PitchStabilizer{
   constructor({frames=STABILIZATION_CONFIG.frames,cents=STABILIZATION_CONFIG.cents,minRms=PITCH_DETECTION_CONFIG.minRms,minConfidence=PITCH_DETECTION_CONFIG.minConfidence}={}){this.frames=frames;this.cents=cents;this.minRms=minRms;this.minConfidence=minConfidence;this.samples=[];this.midi=null}
   reset(){this.samples=[];this.midi=null}

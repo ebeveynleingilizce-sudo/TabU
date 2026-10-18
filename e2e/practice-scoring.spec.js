@@ -13,7 +13,7 @@ test('microphone pitch colors correct, wrong and missed TAB notes and summarizes
       createAnalyser(){return {fftSize:4096,smoothingTimeConstant:0,getFloatTimeDomainData(buffer){
         const frequency=window.__micFrequency||0,amplitude=frequency ? .12 : 0;
         for(let index=0;index<buffer.length;index++)buffer[index]=amplitude*Math.sin(2*Math.PI*frequency*index/44100)
-      }}}
+      },getFloatFrequencyData(buffer){buffer.fill(-100);const frequency=window.__micFrequency||0;if(frequency)buffer[Math.round(frequency/(44100/2048))]=-8}}}
     };
   });
   await page.goto('/#practice');
@@ -55,7 +55,7 @@ test('a sustained two-second guitar tone does not answer the following TAB note'
       createAnalyser(){return {fftSize:4096,smoothingTimeConstant:0,getFloatTimeDomainData(buffer){
         const frequency=window.__micFrequency,amplitude=frequency ? .12 : 0;
         for(let index=0;index<buffer.length;index++)buffer[index]=amplitude*Math.sin(2*Math.PI*frequency*index/44100)
-      }}}
+      },getFloatFrequencyData(buffer){buffer.fill(-100);const frequency=window.__micFrequency||0;if(frequency)buffer[Math.round(frequency/(44100/2048))]=-8}}}
     };
   });
   await page.goto('/#practice');
@@ -87,7 +87,7 @@ test('microphone scoring follows the TAB clock at 0.5x speed',async({page,browse
       createAnalyser(){return {fftSize:4096,smoothingTimeConstant:0,getFloatTimeDomainData(buffer){
         const frequency=window.__micFrequency,amplitude=frequency ? .12 : 0;
         for(let index=0;index<buffer.length;index++)buffer[index]=amplitude*Math.sin(2*Math.PI*frequency*index/44100)
-      }}}
+      },getFloatFrequencyData(buffer){buffer.fill(-100);const frequency=window.__micFrequency||0;if(frequency)buffer[Math.round(frequency/(44100/2048))]=-8}}}
     };
   });
   await page.goto('/#practice');
@@ -104,4 +104,20 @@ test('microphone scoring follows the TAB clock at 0.5x speed',async({page,browse
   await expect(page.locator('.time-note[data-index="1"]')).toHaveClass(/active/,{timeout:5000});
   await page.evaluate(()=>window.__micFrequency=349.23);
   await expect(page.locator('.time-note[data-index="1"]')).toHaveClass(/correct/,{timeout:4000});
+});
+
+test('landscape practice fits the viewport and keeps only core controls',async({page})=>{
+  await page.setViewportSize({width:844,height:390});
+  await page.goto('/#practice');
+  await expect(page.locator('.app-shell.practice-focus')).toBeVisible();
+  await expect(page.locator('.sidebar')).toBeHidden();
+  await expect(page.locator('.bottom-nav')).toBeHidden();
+  await expect(page.locator('.topbar')).toBeHidden();
+  await expect(page.locator('.bpm-control')).toBeHidden();
+  await expect(page.locator('[data-action="edit-tab"]')).toBeHidden();
+  await expect(page.locator('.timeboard-wrap')).toBeVisible();
+  await expect(page.locator('#audio-speed-select')).toBeVisible();
+  await expect(page.locator('.classroom-meter')).toBeVisible();
+  const overflow=await page.evaluate(()=>document.documentElement.scrollHeight>window.innerHeight||document.body.scrollHeight>window.innerHeight);
+  expect(overflow).toBe(false);
 });

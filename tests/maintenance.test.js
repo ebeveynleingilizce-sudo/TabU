@@ -19,7 +19,7 @@ function microphoneClass(getUserMedia,AudioContext){
   const source=readFileSync(new URL('../audio/microphone.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/,'').replaceAll('export ','');
   return vm.runInNewContext(source+'\nMicrophoneInput',{
     navigator:{mediaDevices:{getUserMedia}},AudioContext,
-    PitchStabilizer:class{reset(){}},GuitarOnsetDetector:class{push(){return false}reset(){}},GuitarNoteOnsetTracker:class{push(){return {newOnset:false,onsetAgeMs:Infinity,onsetId:0}}reset(){}},cancelAnimationFrame(){},requestAnimationFrame(){return 1}
+    PitchStabilizer:class{reset(){}},GuitarOnsetDetector:class{push(){return false}reset(){}},GuitarNoteOnsetTracker:class{push(){return {newOnset:false,onsetAgeMs:Infinity,onsetId:0}}reset(){}},SpectralFluxDetector:class{push(){return false}reset(){}},cancelAnimationFrame(){},requestAnimationFrame(){return 1}
   });
 }
 
@@ -57,11 +57,11 @@ test('a stabilized onset reads the shared clock and resolves a note once',()=>{
   const source=main.slice(main.indexOf('function handleLivePitch('),main.indexOf('async function toggleMic('));
   let observed;
   const statuses=['PENDING'],practiceClock=new PracticeClock();practiceClock.seek(1.25);
-  const context={state:{route:'practice',running:true,step:0},liveTracking:true,practicePhase:'playing',micFrame:null,
+  const context={LIVE_PITCH_TOLERANCE_CENTS:35,lastLiveScoreAt:0,performance:{now(){return 1000}},state:{route:'practice',running:true,step:0},liveTracking:true,practicePhase:'playing',micFrame:null,
     MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:[{startTime:1.25,notes:[{string:'e',fret:0}]}],
     activeTab:{events:[{startTime:1.25,notes:[{string:'e',fret:0}]}]},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,
     NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},isQualifiedGuitarOnset(){return true},
-    noteUnderPlayheadAtTime,resolveNoteStatus,document:{querySelector(){return {clientWidth:440}}},
+    noteUnderPlayheadAtTime,resolveNoteStatus,LIVE_PITCH_TOLERANCE_CENTS:35,lastLiveScoreAt:0,performance:{now(){return 1000}},document:{querySelector(){return {clientWidth:440}}},
     settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},updateAudioDebug(){},
     matchNote,expectedGuitarNote,currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
   vm.runInNewContext(source+'\nhandleLivePitch({level:.1,note:{midi:64,frequency:329.63},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});',context);
@@ -72,9 +72,9 @@ test('a stabilized onset reads the shared clock and resolves a note once',()=>{
 test('a note scores only while the playhead overlaps its visible number',()=>{
   const source=main.slice(main.indexOf('function handleLivePitch('),main.indexOf('async function toggleMic('));
   const events=[{startTime:0,notes:[{string:'e',fret:0}]},{startTime:1,notes:[{string:'e',fret:1}]}];
-  const run=(time,pitch)=>{
-    const statuses=['PENDING','PENDING'],practiceClock=new PracticeClock();practiceClock.seek(time);
-    const context={state:{route:'practice',running:true,step:1},liveTracking:true,practicePhase:'playing',micFrame:null,
+  const run=(time,pitch,statuses=['PENDING','PENDING'],receivedAt=1000)=>{
+    const practiceClock=new PracticeClock();practiceClock.seek(time);
+    const context={LIVE_PITCH_TOLERANCE_CENTS:35,lastLiveScoreAt:0,performance:{now(){return receivedAt}},state:{route:'practice',running:true,step:1},liveTracking:true,practicePhase:'playing',micFrame:null,
       MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:events,
       activeTab:{events},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},
       isQualifiedGuitarOnset(){return true},noteUnderPlayheadAtTime,resolveNoteStatus,settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},
@@ -85,7 +85,17 @@ test('a note scores only while the playhead overlaps its visible number',()=>{
   assert.deepEqual(run(.6,65),['PENDING','PENDING'],'a different note played before the bar reaches it is ignored');
   assert.deepEqual(run(.8,64),['PENDING','WRONG'],'a wrong pitch is scored only on the note under the bar');
   assert.deepEqual(run(.8,65),['PENDING','CORRECT'],'the matching pitch turns green while the bar overlaps the number');
-  assert.deepEqual(run(1.4,66),['PENDING','PENDING'],'the note no longer accepts sound after the bar leaves it');
+  assert.deepEqual(run(1.5,66),['PENDING','PENDING'],'sound is ignored after the visual zone and bounded analysis allowance expire');
+  const retry=['PENDING','PENDING'];
+  run(.8,64,retry,1000);assert.deepEqual(retry,['PENDING','WRONG'],'an initial wrong pluck is shown red');
+  run(.82,65,retry,1100);assert.deepEqual(retry,['PENDING','CORRECT'],'a corrected retry turns green before the playhead leaves');
+});
+
+test('wide-screen scoring starts at the note and allows bounded pitch analysis latency',()=>{
+  const events=[{startTime:2,notes:[{string:'e',fret:1}]}],statuses=['PENDING'];
+  assert.equal(noteUnderPlayheadAtTime(events,1.9,statuses,{scale:300,width:56,latency:.08}),-1,'latency allowance never scores before the playhead reaches the note');
+  assert.equal(noteUnderPlayheadAtTime(events,2.2,statuses,{scale:300,width:56,latency:.18}),0,'pitch analysis latency is allowed briefly as the note clears the playhead');
+  assert.equal(noteUnderPlayheadAtTime(events,2.28,statuses,{scale:300,width:56,latency:.18}),-1,'the late scoring allowance stays bounded');
 });
 
 test('fresh worker install caches every versioned module requested by the app',async()=>{
