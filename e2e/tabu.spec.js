@@ -118,3 +118,24 @@ test('fresh PWA install opens offline with the complete application shell',async
   expect(background).not.toBe('rgba(0, 0, 0, 0)');
   await page.getByRole('button',{name:/Hemen Çalış/}).click();await expect(page.locator('.time-note')).toHaveCount(7);
 });
+
+test('custom TAB saves chord mode, groups same-time notes, and restores the mode for editing',async({page})=>{
+  await page.goto('/#practice');
+  await page.locator('.editor-shortcut[data-route="editor"]').click();
+  await page.locator('#edit-title').fill('Chord mode E2E');
+  await page.locator('#edit-mode').selectOption('chord');
+  await expect(page.locator('#next-chord')).toBeVisible();
+  await page.locator('#edit-string').selectOption('e');await page.locator('#edit-fret').fill('0');
+  await page.locator('[data-action="add-note"]').click();
+  await page.locator('#edit-string').selectOption('B');await page.locator('#edit-fret').fill('1');
+  await page.locator('[data-action="add-note"]').click();
+  await page.locator('[data-action="save-tab"]').click();
+  await expect(page.locator('#exercise-select')).toBeVisible();
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('tabu-custom-tabs')||'[]').find(tab=>tab.title==='Chord mode E2E'));
+  expect(saved.mode).toBe('chord');
+  expect(saved.data.e[0].timeBeats).toBe(saved.data.B[0].timeBeats);
+  await expect(page.locator('#expected-note')).toHaveText('E4 + C4');
+  await expect(page.locator('[data-action="take-turn"]')).toBeEnabled();
+  await page.locator('[data-action="edit-tab"]').click();
+  await expect(page.locator('#edit-mode')).toHaveValue('chord');
+});

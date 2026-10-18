@@ -90,3 +90,6 @@
   .app-shell.practice-focus .fretboard-player .classroom-meter{display:flex;flex:none;align-items:center;gap:7px;margin:2px 0 0;font-size:9px}
   .app-shell.practice-focus .classroom-meter .meter{flex:1;height:4px}
 }
+/* Keep the added chord controls and their guidance usable on narrow screens. */
+.editor-add-action{flex-wrap:wrap}
+.editor-add-action small{flex:1 1 100%;line-height:1.4}
