@@ -15,11 +15,11 @@ test('TAB parser preserves both Mi strings and low-string open/two-digit frets',
   assert.deepEqual(tab.events.flatMap(event=>event.notes).filter(note=>note.string==='e').map(note=>note.fret),[1,3,5]);
 });
 
-function microphoneClass(getUserMedia,AudioContext){
+function microphoneClass(getUserMedia,AudioContext,extra={}){
   const source=readFileSync(new URL('../audio/microphone.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/,'').replaceAll('export ','');
   return vm.runInNewContext(source+'\nMicrophoneInput',{
     navigator:{mediaDevices:{getUserMedia}},AudioContext,
-    PitchStabilizer:class{reset(){}},GuitarOnsetDetector:class{push(){return false}reset(){}},GuitarNoteOnsetTracker:class{push(){return {newOnset:false,onsetAgeMs:Infinity,onsetId:0}}reset(){}},SpectralFluxDetector:class{push(){return false}reset(){}},cancelAnimationFrame(){},requestAnimationFrame(){return 1}
+    PitchStabilizer:class{reset(){}push(result){return {...result,signal:false,candidateMidi:null,frequency:null}}},GuitarOnsetDetector:class{push(){return false}reset(){}},GuitarNoteOnsetTracker:class{push(){return {newOnset:false,onsetAgeMs:Infinity,onsetId:0}}reset(){}},SpectralFluxDetector:class{push(){return false}reset(){}},TargetFrequencyDeltaDetector:class{push(){return null}reset(){}},detectPitch(){throw new Error('global pitch detection should be skipped for target mode')},frequencyToNote(){return null},performance:{now(){return 0}},cancelAnimationFrame(){},requestAnimationFrame(){return 1},...extra
   });
 }
 
@@ -53,13 +53,25 @@ test('stopping during AudioContext resume closes context and does not initialize
   assert.equal(await pending,false);assert.equal(stops,1);assert.equal(closes,1);
 });
 
+test('target-guided microphone mode skips global YIN pitch detection',async()=>{
+  let frames=0;
+  const Input=microphoneClass(async()=>({getTracks:()=>[{stop(){}}]}),class{
+    state='running';sampleRate=22050;
+    createMediaStreamSource(){return {connect(){}}}
+    createAnalyser(){return {fftSize:2048,frequencyBinCount:1024,getFloatTimeDomainData(buffer){buffer.fill(0)},getFloatFrequencyData(buffer){buffer.fill(-100)}}}
+    async close(){}
+  });
+  const input=new Input(()=>frames++,undefined,()=>[]);
+  assert.equal(await input.start(),true);assert.equal(frames,1);input.stop();
+});
+
 test('a stabilized onset reads the shared clock and resolves a note once',()=>{
   const source=main.slice(main.indexOf('function handleLivePitch('),main.indexOf('async function toggleMic('));
   let observed;
   const statuses=['PENDING'],practiceClock=new PracticeClock();practiceClock.seek(1.25);
   const context={LIVE_PITCH_TOLERANCE_CENTS:35,lastLiveScoreAt:0,performance:{now(){return 1000}},state:{route:'practice',running:true,step:0},liveTracking:true,practicePhase:'playing',micFrame:null,
     MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:[{startTime:1.25,notes:[{string:'e',fret:0}]}],
-    activeTab:{events:[{startTime:1.25,notes:[{string:'e',fret:0}]}]},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,
+    activeTab:{events:[{startTime:1.25,notes:[{string:'e',fret:0}]}]},TAB_MODE:{ARPEGGIO:'arpeggio'},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,
     NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},isQualifiedGuitarOnset(){return true},
     noteUnderPlayheadAtTime,resolveNoteStatus,LIVE_PITCH_TOLERANCE_CENTS:35,lastLiveScoreAt:0,performance:{now(){return 1000}},document:{querySelector(){return {clientWidth:440}}},
     settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},updateAudioDebug(){},
@@ -69,6 +81,24 @@ test('a stabilized onset reads the shared clock and resolves a note once',()=>{
   assert.equal(observed,1.25);assert.equal(statuses[0],'CORRECT');assert.equal(context.sessionCorrect,1);
 });
 
+test('arpeggio mode scores a target-frequency attack without requiring a global pitch onset',()=>{
+  const source=main.slice(main.indexOf('function handleLivePitch('),main.indexOf('async function toggleMic('));
+  const statuses=['PENDING'],context={state:{route:'practice',running:true},liveTracking:true,practicePhase:'playing',activeTab:{mode:'arpeggio',events:[{startTime:1,notes:[{string:'A',fret:0}]}]},
+    TAB_MODE:{ARPEGGIO:'arpeggio'},liveStatuses:statuses,practiceClock:new PracticeClock(),NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},
+    resolveNoteStatus,performance:{now(){return 2000}},sessionCorrect:0,currentExercise(){return {id:'arp-test'}},recordAnswer(){},setNoteFeedback(){},updateAudioDebug(){},updatePracticeStatusBoard(){},settlePracticeNotes(){return 0},canFinishLivePractice(){return false}};
+  context.practiceClock.seek(1);vm.runInNewContext(source+`\nhandleLivePitch({level:.08,note:null,newOnset:false,targetAttack:{index:0,deltaDb:7.4}});`,context);
+  assert.deepEqual(statuses,['CORRECT']);assert.equal(context.sessionCorrect,1);
+});
+
+test('arpeggio microphone tracks the playhead target and pre-arms the next note frequency',()=>{
+  const source=main.slice(main.indexOf('function arpeggioTargetCandidates('),main.indexOf('function fretboardStatuses(')),clock=new PracticeClock();clock.seek(1);
+  const events=[{startTime:1,notes:[{string:'e',fret:0}]},{startTime:1.3,notes:[{string:'B',fret:1}]}],context={state:{route:'practice'},practicePhase:'playing',activeTab:{mode:'arpeggio',events},practiceClock:clock,practiceClockEvents:events,liveStatuses:['PENDING','PENDING'],
+    TAB_MODE:{ARPEGGIO:'arpeggio'},NOTE_STATUS:{CORRECT:'CORRECT'},document:{querySelector(selector){return selector==='#fretboard-viewport'?{clientWidth:440}:{getBoundingClientRect(){return {width:56}}}}},noteUnderPlayheadAtTime,expectedGuitarNote};
+  const candidates=vm.runInNewContext(source+'\narpeggioTargetCandidates()',context);
+  assert.equal(candidates[0].index,0);assert.equal(candidates[0].eligible,true);assert.equal(candidates[0].frequency,expectedGuitarNote('e',0).frequency);
+  assert.equal(candidates[1].index,1);assert.equal(candidates[1].eligible,false);assert.equal(candidates[1].frequency,expectedGuitarNote('B',1).frequency);
+});
+
 test('a note scores only while the playhead overlaps its visible number',()=>{
   const source=main.slice(main.indexOf('function handleLivePitch('),main.indexOf('async function toggleMic('));
   const events=[{startTime:0,notes:[{string:'e',fret:0}]},{startTime:1,notes:[{string:'e',fret:1}]}];
@@ -76,7 +106,7 @@ test('a note scores only while the playhead overlaps its visible number',()=>{
     const practiceClock=new PracticeClock();practiceClock.seek(time);
     const context={LIVE_PITCH_TOLERANCE_CENTS:35,lastLiveScoreAt:0,performance:{now(){return receivedAt}},state:{route:'practice',running:true,step:1},liveTracking:true,practicePhase:'playing',micFrame:null,
       MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:events,
-      activeTab:{events},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},
+      activeTab:{events},TAB_MODE:{ARPEGGIO:'arpeggio'},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},
       isQualifiedGuitarOnset(){return true},noteUnderPlayheadAtTime,resolveNoteStatus,settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},
       document:{querySelector(){return {clientWidth:440}}},updateAudioDebug(){},expectedGuitarNote,matchNote,currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
     vm.runInNewContext(source+`\nhandleLivePitch({level:.1,note:{midi:${pitch},frequency:${pitch===64?'329.63':pitch===65?'349.23':'369.99'},detectedFrequency:${pitch===64?'329.63':pitch===65?'349.23':'369.99'}},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});`,context);
@@ -109,4 +139,5 @@ test('fresh worker install caches every versioned module requested by the app',a
   const requests=[new URL(html.match(/src="(app\/main\.js[^" ]*)"/)[1],base).href];
   for(const match of main.matchAll(/from\s*'([^']+\?[^']+)'/g))requests.push(new URL(match[1],base+'app/main.js').href);
   for(const request of requests)assert.ok(cached.has(request),`Missing offline module: ${request}`);
+  assert.ok(cached.has(new URL('./audio/targetPitchDetector.js',base).href),'Missing offline arpeggio target detector');
 });
