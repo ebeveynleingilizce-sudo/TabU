@@ -74,7 +74,9 @@
   .app-shell.practice-focus .topbar{display:none}
   .app-shell.practice-focus .bottom-nav{display:none}
   .app-shell.practice-focus .view{height:100%;min-height:0;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;padding:3px 9px;overflow:hidden}
-  .app-shell.practice-focus .practice-topline{display:none}
+  .app-shell.practice-focus .practice-topline{display:flex;flex:none;align-items:center;min-height:30px;margin:0 0 2px;padding:0 2px}
+  .app-shell.practice-focus .practice-topline>label,.app-shell.practice-focus .practice-topline .note-display-control,.app-shell.practice-focus .practice-topline .bpm-control,.app-shell.practice-focus .practice-topline .editor-shortcut{display:none!important}
+  .app-shell.practice-focus .practice-topline #exercise-select{display:block;flex:1;width:100%;max-width:none;min-height:30px;padding:5px 9px;font-size:11px}
   .app-shell.practice-focus .fretboard-player{display:flex;flex:1;flex-direction:column;min-height:0;padding:0 9px 3px;overflow:hidden}
   .app-shell.practice-focus .fretboard-player .classroom-title,.app-shell.practice-focus .practice-feedback,.app-shell.practice-focus .metronome-row,.app-shell.practice-focus .practice-audio,.app-shell.practice-focus .fretboard-caption,.app-shell.practice-focus .expected-panel,.app-shell.practice-focus .classroom-instruction,.app-shell.practice-focus .classroom-tip,.app-shell.practice-focus .audio-debug{display:none!important}
   .app-shell.practice-focus .fretboard-player>.audio-speed-control{display:flex;flex:none;align-self:flex-end;align-items:center;gap:5px;margin:0 0 2px;font-size:8px}
