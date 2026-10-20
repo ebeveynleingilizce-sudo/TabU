@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "TabU — Gitar TAB çalışma alanı",
-  "short_name": "TabU",
-  "description": "Gitar TAB öğren. Çal. Ustalaş.",
+  "name": "Gitarist — Gitar öğren",
+  "short_name": "Gitarist",
+  "description": "Gitarist ile gitar öğren. Ritmini bul, kendi hızında ilerle.",
   "lang": "tr",
   "start_url": "./index.html#home",
   "scope": "./",
