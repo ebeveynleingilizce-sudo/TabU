@@ -4,9 +4,15 @@ test('app loads and navigation renders the main interface',async({page})=>{
   const response=await page.goto('/');expect(response.ok()).toBeTruthy();
   await expect(page.locator('.home-hero')).toBeVisible();
   await page.getByRole('button',{name:/Hemen Çalış/}).click();
+  const initialViewport=page.viewportSize();
+  if(initialViewport.width<=760){
+    await expect(page.locator('.portrait-rotate-prompt')).toBeVisible();
+    await page.setViewportSize({width:800,height:600});
+  }
   await expect(page.locator('#exercise-select')).toBeVisible();
   await page.locator('.mobile-brand').click();
   await expect(page.locator('.home-hero')).toBeVisible();
+  if(initialViewport.width<=760)await page.setViewportSize(initialViewport);
   const nav=page.viewportSize().width<=760?page.locator('.bottom-nav'):page.locator('.side-nav');
   await nav.locator('[data-route="learn"]').click();await expect(page.locator('.lesson-card')).toHaveCount(8);
   await nav.locator('[data-route="progress"]').click();await expect(page.locator('.stat-card')).toHaveCount(4);
@@ -16,7 +22,13 @@ test('app loads and navigation renders the main interface',async({page})=>{
 test('responsive pages have no horizontal overflow and primary controls are usable',async({page})=>{
   const routeReady={home:'.home-hero',practice:'#exercise-select',editor:'#edit-title',learn:'.lesson-card:first-child',progress:'.stat-card:first-child'};
   for(const route of ['home','practice','editor','learn','progress']){
-    await page.goto('/#'+route);await expect(page.locator(routeReady[route])).toBeVisible();
+    const initialViewport=page.viewportSize();
+    await page.goto('/#'+route);
+    if(route==='practice'&&initialViewport.width<=760){
+      await expect(page.locator('.portrait-rotate-prompt')).toBeVisible();
+      await page.setViewportSize({width:800,height:600});
+    }
+    await expect(page.locator(routeReady[route])).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),route+' horizontal overflow '+JSON.stringify(await page.evaluate(()=>({innerWidth,scrollWidth:document.documentElement.scrollWidth,overflow:[...document.querySelectorAll('body *')].map(node=>({tag:node.tagName,className:typeof node.className==='string'?node.className:'',left:Math.round(node.getBoundingClientRect().left),right:Math.round(node.getBoundingClientRect().right)})).filter(node=>node.right>innerWidth+1||node.left< -1).slice(0,8)})))).toBeTruthy();
     const controls=page.locator('#view button:visible, #view select:visible, #view input:visible');
     for(const control of await controls.all()){
@@ -24,6 +36,7 @@ test('responsive pages have no horizontal overflow and primary controls are usab
       expect(box.x,route+' control left').toBeGreaterThanOrEqual(-1);
       expect(box.x+box.width,route+' control right').toBeLessThanOrEqual(page.viewportSize().width+1);
     }
+    if(route==='practice'&&initialViewport.width<=760)await page.setViewportSize(initialViewport);
   }
 });
 
@@ -116,11 +129,14 @@ test('fresh PWA install opens offline with the complete application shell',async
   await expect(page.locator('.home-hero')).toHaveCSS('display','block');
   const background=await page.locator('body').evaluate(body=>getComputedStyle(body).backgroundColor);
   expect(background).not.toBe('rgba(0, 0, 0, 0)');
-  await page.getByRole('button',{name:/Hemen Çalış/}).click();await expect(page.locator('.time-note')).toHaveCount(7);
+  await page.getByRole('button',{name:/Hemen Çalış/}).click();
+  const viewport=page.viewportSize();
+  if(viewport.width<=760){await expect(page.locator('.portrait-rotate-prompt')).toBeVisible();await page.setViewportSize({width:800,height:600})}
+  await expect(page.locator('.time-note')).toHaveCount(7);
 });
 
 test('custom TAB saves chord mode, groups same-time notes, and restores the mode for editing',async({page})=>{
-  await page.goto('/#practice');
+  await openPractice(page);
   await page.locator('.editor-shortcut[data-route="editor"]').click();
   await page.locator('#edit-title').fill('Chord mode E2E');
   await page.locator('#edit-mode').selectOption('chord');

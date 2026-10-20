@@ -143,3 +143,12 @@
   .home-copy .primary-button{margin-top:13px;padding:10px 15px}
   .home-guitar{height:64%}
 }
+.portrait-rotate-prompt{display:none}
+@media(max-width:760px) and (orientation:portrait){
+  .app-shell.practice-focus .view{display:none}
+  .app-shell.practice-focus .portrait-rotate-prompt{min-height:calc(100svh - 40px);padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+  .portrait-rotate-prompt span{color:#b59aff;font-size:68px;line-height:1;animation:rotate-phone 2.4s ease-in-out infinite}
+  .portrait-rotate-prompt strong{color:#f4f1ff;font-size:17px}
+  .portrait-rotate-prompt p{margin:0;color:#a4a2b6;font-size:13px}
+}
+@keyframes rotate-phone{0%,100%{transform:rotate(0)}45%,70%{transform:rotate(90deg)}}

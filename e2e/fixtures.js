@@ -16,6 +16,11 @@ export {expect};
 
 export async function openPractice(page){
   await page.goto('/#practice');
+  const viewport=page.viewportSize();
+  if(viewport.width<=760&&viewport.height>viewport.width){
+    await expect(page.locator('.portrait-rotate-prompt')).toBeVisible();
+    await page.setViewportSize({width:800,height:600});
+  }
   await expect(page.locator('#exercise-select')).toBeVisible();
   await page.locator('#exercise-select').selectOption('frets-0123');
   await expect(page.locator('.time-note')).toHaveCount(7);

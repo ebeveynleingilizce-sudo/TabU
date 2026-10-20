@@ -1,4 +1,4 @@
-import {test,expect} from './fixtures.js';
+import {test,expect,openPractice} from './fixtures.js';
 
 test('microphone pitch colors correct, wrong and missed TAB notes and summarizes them',async({page,browserName})=>{
   test.skip(browserName==='webkit','The synthetic AnalyserNode microphone fixture does not provide a stable pitch stream in WebKit; microphone scoring is covered in Chromium projects and logic tests.');
@@ -16,7 +16,7 @@ test('microphone pitch colors correct, wrong and missed TAB notes and summarizes
       },getFloatFrequencyData(buffer){buffer.fill(-100);const frequency=window.__micFrequency||0;if(frequency)buffer[Math.round(frequency/(44100/2048))]=-8}}}
     };
   });
-  await page.goto('/#practice');
+  await openPractice(page);
   await page.evaluate(()=>localStorage.setItem('tabu-custom-tabs',JSON.stringify([{
     id:'custom-e2e-score',title:'Scoring E2E',difficulty:'Test',bpm:100,duration:'test',description:'',
     data:{e:[{fret:0,timeBeats:0,startTime:0},{fret:1,timeBeats:1,startTime:2},{fret:3,timeBeats:2,startTime:4}],B:[],G:[],D:[],A:[],E:[]}
@@ -58,7 +58,7 @@ test('a sustained two-second guitar tone does not answer the following TAB note'
       },getFloatFrequencyData(buffer){buffer.fill(-100);const frequency=window.__micFrequency||0;if(frequency)buffer[Math.round(frequency/(44100/2048))]=-8}}}
     };
   });
-  await page.goto('/#practice');
+  await openPractice(page);
   await page.evaluate(()=>localStorage.setItem('tabu-custom-tabs',JSON.stringify([{
     id:'custom-sustained-score',title:'Sustained E2E',difficulty:'Test',bpm:100,duration:'test',description:'',
     data:{e:[{fret:0,timeBeats:0,startTime:0},{fret:1,timeBeats:3.5,startTime:2.1}],B:[],G:[],D:[],A:[],E:[]}
@@ -90,7 +90,7 @@ test('microphone scoring follows the TAB clock at 0.5x speed',async({page,browse
       },getFloatFrequencyData(buffer){buffer.fill(-100);const frequency=window.__micFrequency||0;if(frequency)buffer[Math.round(frequency/(44100/2048))]=-8}}}
     };
   });
-  await page.goto('/#practice');
+  await openPractice(page);
   await page.evaluate(()=>localStorage.setItem('tabu-custom-tabs',JSON.stringify([{
     id:'custom-half-speed-score',title:'Half Speed E2E',difficulty:'Test',bpm:100,duration:'test',description:'',
     data:{e:[{fret:0,startTime:0},{fret:1,startTime:1},{fret:3,startTime:2}],B:[],G:[],D:[],A:[],E:[]}
