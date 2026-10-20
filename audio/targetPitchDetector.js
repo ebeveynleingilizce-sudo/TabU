@@ -1,4 +1,4 @@
-const DEFAULT_CONFIG=Object.freeze({deltaDb:6,bassDeltaDb:3.8,minTargetRms:.003,minInterHitMs:100,baselineAlpha:.12,highPassHz:180,transientDeltaDb:4,transientFloorDb:-75,bassActiveDb:-45});
+const DEFAULT_CONFIG=Object.freeze({deltaDb:6,bassDeltaDb:3.8,minTargetRms:.003,minInterHitMs:100,baselineAlpha:.12,highPassHz:180,transientFluxThreshold:.2,transientFloorDb:-75,bassActiveDb:-45});
 const windowCache=new Map();
 
 function getHannWindow(length){
@@ -40,13 +40,24 @@ function bandDb(spectrum,sampleRate,fftSize,lowHz,highHz){
   return count?10*Math.log10(Math.max(1e-12,power/count)):-120;
 }
 
+function bandFlux(spectrum,previous,sampleRate,fftSize,lowHz,highHz){
+  if(!previous||previous.length!==spectrum.length)return {flux:0,magnitudes:Float32Array.from(spectrum,value=>Number.isFinite(value)?10**(value/20):0)};
+  const binHz=sampleRate/fftSize,first=Math.max(1,Math.ceil(lowHz/binHz)),last=Math.min(spectrum.length-1,Math.floor(highHz/binHz)),magnitudes=new Float32Array(spectrum.length);let positive=0,prior=0;
+  for(let bin=first;bin<=last;bin++){
+    const current=Number.isFinite(spectrum[bin])?10**(spectrum[bin]/20):0,old=Number.isFinite(previous[bin])?previous[bin]:0;
+    magnitudes[bin]=current;positive+=Math.max(0,current-old);prior+=old;
+  }
+  return {flux:positive/Math.max(prior,10**(-75/20)),magnitudes};
+}
+
 export class ArpeggioAudioMonitor{
-  constructor(config={}){this.config={...DEFAULT_CONFIG,...config};this.transientBaseline=null;this.lastTransientAt=-Infinity}
-  reset(){this.transientBaseline=null;this.lastTransientAt=-Infinity}
+  constructor(config={}){this.config={...DEFAULT_CONFIG,...config};this.previousSpectrum=null;this.previousTransientDb=null;this.lastTransientAt=-Infinity}
+  reset(){this.previousSpectrum=null;this.previousTransientDb=null;this.lastTransientAt=-Infinity}
   push(spectrum,sampleRate,fftSize,now=performance.now()){
-    const bassDb=bandDb(spectrum,sampleRate,fftSize,45,180),transientDb=bandDb(spectrum,sampleRate,fftSize,2000,5000),baseline=this.transientBaseline,transientDeltaDb=baseline===null?0:transientDb-baseline,transient=baseline!==null&&transientDb>=this.config.transientFloorDb&&transientDeltaDb>=this.config.transientDeltaDb&&now-this.lastTransientAt>=25;
-    if(transient){this.lastTransientAt=now;this.transientBaseline=transientDb}else if(baseline===null)this.transientBaseline=transientDb;else this.transientBaseline+=Math.min(0,transientDb-baseline)*.35+(Math.max(0,transientDb-baseline)*.08);
-    return {bassActive:bassDb>=this.config.bassActiveDb,bassDb,transient,transientDb,transientDeltaDb};
+    const bassDb=bandDb(spectrum,sampleRate,fftSize,45,180),transientDb=bandDb(spectrum,sampleRate,fftSize,2000,5000),fluxResult=bandFlux(spectrum,this.previousSpectrum,sampleRate,fftSize,2000,5000),transientDeltaDb=this.previousTransientDb===null?0:transientDb-this.previousTransientDb,transient=fluxResult.flux>=this.config.transientFluxThreshold&&transientDb>=this.config.transientFloorDb&&now-this.lastTransientAt>=24;
+    this.previousSpectrum=fluxResult.magnitudes;this.previousTransientDb=transientDb;
+    if(transient)this.lastTransientAt=now;
+    return {bassActive:bassDb>=this.config.bassActiveDb,bassDb,transient,transientDb,transientDeltaDb,transientFlux:fluxResult.flux};
   }
 }
 
@@ -57,7 +68,7 @@ export class TargetFrequencyDeltaDetector{
     let best=null;
     for(const target of targets){
       if(!Number.isInteger(target?.index)||!Number.isFinite(target.frequency))continue;
-      const string=String(target.string),id=target.id??target.index,upperString=['G','B','e','1','2','3'].includes(string),filtered=upperString?highPassBuffer(buffer,sampleRate,this.config.highPassHz):buffer,filterGain=upperString?highPassMagnitude(target.frequency,sampleRate,this.config.highPassHz):1,rms=targetToneRms(filtered,sampleRate,target.frequency)/filterGain,db=20*Math.log10(Math.max(1e-7,rms)),entry=this.baselines.get(id),baseline=entry?.db,deltaDb=baseline===undefined?0:db-baseline,lastHit=this.lastHitAt.get(id)??-Infinity,requiredDelta=audioState.bassActive?this.config.bassDeltaDb:this.config.deltaDb,hasAttack=!upperString||audioState.transient===true;
+      const string=String(target.string),id=target.id??target.index,upperString=['G','B','e','1','2','3'].includes(string),filtered=upperString?highPassBuffer(buffer,sampleRate,this.config.highPassHz):buffer,filterGain=upperString?highPassMagnitude(target.frequency,sampleRate,this.config.highPassHz):1,rms=targetToneRms(filtered,sampleRate,target.frequency)/filterGain,db=20*Math.log10(Math.max(1e-7,rms)),entry=this.baselines.get(id),baseline=entry?.db,deltaDb=baseline===undefined?0:db-baseline,lastHit=this.lastHitAt.get(id)??-Infinity,requiredDelta=audioState.bassActive?this.config.bassDeltaDb:this.config.deltaDb,hasAttack=audioState.transient===true;
       const attack=target.eligible!==false&&baseline!==undefined&&rms>=this.config.minTargetRms&&deltaDb>=requiredDelta&&hasAttack&&now-lastHit>=this.config.minInterHitMs;
       if(attack){this.lastHitAt.set(id,now);this.baselines.set(id,{db,lastSeenAt:now});const candidate={index:target.index,frequency:target.frequency,deltaDb,rms};if(!best||candidate.deltaDb>best.deltaDb)best=candidate}
       else if(baseline===undefined)this.baselines.set(id,{db,lastSeenAt:now});

@@ -41,6 +41,23 @@ test('microphone retries with best-effort disabled processing if exact constrain
   assert.equal(stops,1);
 });
 
+test('microphone analysis records actual track processing settings from getSettings()',async()=>{
+  let observed;
+  const settings={autoGainControl:true,noiseSuppression:false,echoCancellation:false,channelCount:1,sampleRate:48000};
+  const track={kind:'audio',getSettings:()=>settings,stop(){}};
+  const stream={getTracks:()=>[track],getAudioTracks:()=>[track]};
+  const Input=microphoneClass(async()=>stream,class{
+    state='running';sampleRate=48000;
+    createMediaStreamSource(){return {connect(){}}}
+    createAnalyser(){return {fftSize:2048,frequencyBinCount:1024,getFloatTimeDomainData(buffer){buffer.fill(0)},getFloatFrequencyData(buffer){buffer.fill(-100)}}}
+    async close(){}
+  });
+  const input=new Input(frame=>observed=frame,undefined,()=>[]);
+  await input.start();
+  assert.deepEqual(JSON.parse(JSON.stringify(observed.audioSettings)),settings,'diagnostics report actual device settings, including when AGC remains enabled');
+  input.stop();
+});
+
 test('stopping while microphone permission is pending releases the late stream',async()=>{
   let resolve,stops=0,contexts=0;
   const Input=microphoneClass(()=>new Promise(done=>resolve=done),class{constructor(){contexts++;throw new Error('should not start after cancellation')}});
