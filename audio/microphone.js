@@ -1,11 +1,25 @@
 import {detectPitch,PitchStabilizer,GuitarOnsetDetector,GuitarNoteOnsetTracker,SpectralFluxDetector} from './pitchDetector.js';import {frequencyToNote} from './noteMatcher.js';import {ArpeggioAudioMonitor,TargetFrequencyDeltaDetector} from './targetPitchDetector.js';
 export const MICROPHONE_CONFIG=Object.freeze({fftSize:2048,decimation:2,minRms:.012,minConfidence:.72,stableFrames:4,stableCents:55,attackRms:.012,attackRatio:1.3,refractoryMs:60,fluxThreshold:.45,onsetWindowMs:420});
+const AUDIO_PROCESSING_CONSTRAINTS=['echoCancellation','noiseSuppression','autoGainControl'];
+async function requestMicrophoneStream(mediaDevices){
+  const supported=mediaDevices.getSupportedConstraints?.()||{};
+  const audio={channelCount:1};
+  for(const name of AUDIO_PROCESSING_CONSTRAINTS)audio[name]=supported[name]?{exact:false}:false;
+  try{return await mediaDevices.getUserMedia({audio})}
+  catch(error){
+    const exactWasRejected=AUDIO_PROCESSING_CONSTRAINTS.some(name=>audio[name]&&typeof audio[name]==='object');
+    if(!exactWasRejected||!['OverconstrainedError','ConstraintNotSatisfiedError'].includes(error?.name))throw error;
+    const fallback={channelCount:1};
+    for(const name of AUDIO_PROCESSING_CONSTRAINTS)fallback[name]=false;
+    return mediaDevices.getUserMedia({audio:fallback});
+  }
+}
 export class MicrophoneInput{
   constructor(onFrame,config=MICROPHONE_CONFIG,targetProvider=()=>null){this.onFrame=onFrame;this.config=config;this.targetProvider=targetProvider;this.targetDeltaDetector=new TargetFrequencyDeltaDetector({deltaDb:6,minInterHitMs:100});this.arpeggioAudioMonitor=new ArpeggioAudioMonitor();this.context=null;this.stream=null;this.raf=0;this.buffer=null;this.downsampled=null;this.stabilizer=new PitchStabilizer({frames:config.stableFrames,cents:config.stableCents,minRms:config.minRms,minConfidence:config.minConfidence});this.onsetDetector=new GuitarOnsetDetector({minRms:config.attackRms,riseRatio:config.attackRatio,refractoryMs:config.refractoryMs});this.fluxDetector=new SpectralFluxDetector({threshold:config.fluxThreshold,refractoryMs:config.refractoryMs});this.noteOnsetTracker=new GuitarNoteOnsetTracker({windowMs:config.onsetWindowMs});this.pitchCandidateMidi=null;this.pitchCandidateAt=null;this.lastTransientAt=-Infinity;this.targetDeltaDetector.reset();this.frequencyBuffer=null}
   async start(){
     this.stop();const generation=this.generation;
     try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
+    const stream=await requestMicrophoneStream(navigator.mediaDevices);
     if(generation!==this.generation){stream.getTracks().forEach(track=>track.stop());return false}
     this.stream=stream;
     this.context=new AudioContext();if(this.context.state==='suspended')await this.context.resume();

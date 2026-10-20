@@ -18,10 +18,28 @@ test('TAB parser preserves both Mi strings and low-string open/two-digit frets',
 function microphoneClass(getUserMedia,AudioContext,extra={}){
   const source=readFileSync(new URL('../audio/microphone.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/,'').replaceAll('export ','');
   return vm.runInNewContext(source+'\nMicrophoneInput',{
-    navigator:{mediaDevices:{getUserMedia}},AudioContext,
-    PitchStabilizer:class{reset(){}push(result){return {...result,signal:false,candidateMidi:null,frequency:null}}},GuitarOnsetDetector:class{push(){return false}reset(){}},GuitarNoteOnsetTracker:class{push(){return {newOnset:false,onsetAgeMs:Infinity,onsetId:0}}reset(){}},SpectralFluxDetector:class{push(){return false}reset(){}},TargetFrequencyDeltaDetector:class{push(){return null}reset(){}},detectPitch(){throw new Error('global pitch detection should be skipped for target mode')},frequencyToNote(){return null},performance:{now(){return 0}},cancelAnimationFrame(){},requestAnimationFrame(){return 1},...extra
+    navigator:{mediaDevices:{getUserMedia,getSupportedConstraints:()=>({echoCancellation:true,noiseSuppression:true,autoGainControl:true}),...extra.mediaDevices}},AudioContext,
+    PitchStabilizer:class{reset(){}push(result){return {...result,signal:false,candidateMidi:null,frequency:null}}},GuitarOnsetDetector:class{push(){return false}reset(){}},GuitarNoteOnsetTracker:class{push(){return {newOnset:false,onsetAgeMs:Infinity,onsetId:0}}reset(){}},SpectralFluxDetector:class{push(){return false}reset(){}},TargetFrequencyDeltaDetector:class{push(){return null}reset(){}},ArpeggioAudioMonitor:class{push(){return null}reset(){}},detectPitch(){throw new Error('global pitch detection should be skipped for target mode')},frequencyToNote(){return null},performance:{now(){return 0}},cancelAnimationFrame(){},requestAnimationFrame(){return 1},...extra
   });
 }
+
+test('microphone requests exact disabled processing when the browser supports those constraints',async()=>{
+  let requested;
+  const Input=microphoneClass(async constraints=>{requested=constraints;return {getTracks:()=>[{stop(){}}]}},class{constructor(){throw new Error('audio unavailable')}});
+  const input=new Input(()=>{});
+  await assert.rejects(input.start(),/audio unavailable/);
+  assert.equal(JSON.stringify(requested.audio),JSON.stringify({channelCount:1,echoCancellation:{exact:false},noiseSuppression:{exact:false},autoGainControl:{exact:false}}));
+});
+
+test('microphone retries with best-effort disabled processing if exact constraints are rejected',async()=>{
+  const calls=[];let stops=0;
+  const Input=microphoneClass(async constraints=>{calls.push(constraints);if(calls.length===1)throw Object.assign(new Error('unsupported exact setting'),{name:'OverconstrainedError'});return {getTracks:()=>[{stop(){stops++}}]}},class{constructor(){throw new Error('audio unavailable')} });
+  const input=new Input(()=>{});
+  await assert.rejects(input.start(),/audio unavailable/);
+  assert.equal(calls.length,2);
+  assert.equal(JSON.stringify(calls[1].audio),JSON.stringify({channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}));
+  assert.equal(stops,1);
+});
 
 test('stopping while microphone permission is pending releases the late stream',async()=>{
   let resolve,stops=0,contexts=0;
