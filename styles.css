@@ -204,3 +204,7 @@
 @media(orientation:landscape) and (max-height:540px){.app-shell.practice-focus .fretboard-actions .control-icon{display:inline-block}}
 
 @media(orientation:landscape) and (max-height:540px){.app-shell.practice-focus .practice-topline>.practice-exercise-picker{display:flex!important}.app-shell.practice-focus .fretboard-actions .primary-button:after{content:"▶";font-size:29px;line-height:1}}
+
+.practice-result-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;margin-top:5px}
+.practice-result-actions button{width:100%;min-width:0;min-height:44px;margin:0}
+@media(orientation:landscape) and (max-height:540px){.app-shell.practice-focus:has(.practice-result) .view{overflow-y:auto}.app-shell.practice-focus:has(.practice-result) .fretboard-player{display:block;flex:none;overflow:visible}.app-shell.practice-focus:has(.practice-result) .timeboard-wrap,.app-shell.practice-focus:has(.practice-result) .fretboard-actions{display:none!important}.app-shell.practice-focus:has(.practice-result) .practice-result{margin:4px 0;padding:12px;gap:6px}}
