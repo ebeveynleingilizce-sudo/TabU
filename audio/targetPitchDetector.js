@@ -69,8 +69,16 @@ export class TargetFrequencyDeltaDetector{
     for(const target of targets){
       if(!Number.isInteger(target?.index)||!Number.isFinite(target.frequency))continue;
       const string=String(target.string),id=target.id??target.index,upperString=['G','B','e','1','2','3'].includes(string),filtered=upperString?highPassBuffer(buffer,sampleRate,this.config.highPassHz):buffer,filterGain=upperString?highPassMagnitude(target.frequency,sampleRate,this.config.highPassHz):1,rms=targetToneRms(filtered,sampleRate,target.frequency)/filterGain,db=20*Math.log10(Math.max(1e-7,rms)),entry=this.baselines.get(id),baseline=entry?.db,deltaDb=baseline===undefined?0:db-baseline,lastHit=this.lastHitAt.get(id)??-Infinity,requiredDelta=audioState.bassActive?this.config.bassDeltaDb:this.config.deltaDb,hasAttack=audioState.transient===true;
-      const attack=target.eligible!==false&&baseline!==undefined&&rms>=this.config.minTargetRms&&deltaDb>=requiredDelta&&hasAttack&&now-lastHit>=this.config.minInterHitMs;
-      if(attack){this.lastHitAt.set(id,now);this.baselines.set(id,{db,lastSeenAt:now});const candidate={index:target.index,frequency:target.frequency,deltaDb,rms};if(!best||candidate.deltaDb>best.deltaDb)best=candidate}
+      // A ringing bass note can put strong energy directly on an upper string's
+      // fundamental (for example E2's 3rd/4th harmonics overlap B3/e4). Mobile
+      // input gain can also clamp the new string's level, so its measured dB
+      // delta may be tiny or even negative. In that case, use the fresh-pluck
+      // transient plus the scheduled target instead of requiring the overlapped
+      // fundamental to rise. Targets are pre-armed, but only the current target
+      // is eligible, and a transient is still mandatory.
+      const bassMaskedUpperAttack=audioState.bassActive&&upperString&&hasAttack&&rms>=this.config.minTargetRms;
+      const attack=target.eligible!==false&&baseline!==undefined&&rms>=this.config.minTargetRms&&(deltaDb>=requiredDelta||bassMaskedUpperAttack)&&hasAttack&&now-lastHit>=this.config.minInterHitMs;
+      if(attack){this.lastHitAt.set(id,now);this.baselines.set(id,{db,lastSeenAt:now});const candidate={index:target.index,frequency:target.frequency,deltaDb,rms,bassMasked:deltaDb<requiredDelta};if(!best||candidate.deltaDb>best.deltaDb)best=candidate}
       else if(baseline===undefined)this.baselines.set(id,{db,lastSeenAt:now});
       else this.baselines.set(id,{db:baseline+(db-baseline)*this.config.baselineAlpha,lastSeenAt:now});
     }

@@ -1,4 +1,4 @@
-import {detectPitch,PitchStabilizer,GuitarOnsetDetector,GuitarNoteOnsetTracker,SpectralFluxDetector} from './pitchDetector.js';import {frequencyToNote} from './noteMatcher.js';import {ArpeggioAudioMonitor,TargetFrequencyDeltaDetector} from './targetPitchDetector.js?v=2';
+import {detectPitch,PitchStabilizer,GuitarOnsetDetector,GuitarNoteOnsetTracker,SpectralFluxDetector} from './pitchDetector.js';import {frequencyToNote} from './noteMatcher.js';import {ArpeggioAudioMonitor,TargetFrequencyDeltaDetector} from './targetPitchDetector.js?v=3';
 export const MICROPHONE_CONFIG=Object.freeze({fftSize:2048,decimation:2,minRms:.012,minConfidence:.72,stableFrames:4,stableCents:55,attackRms:.012,attackRatio:1.3,refractoryMs:60,fluxThreshold:.45,onsetWindowMs:420});
 const AUDIO_PROCESSING_CONSTRAINTS=['echoCancellation','noiseSuppression','autoGainControl'];
 async function requestMicrophoneStream(mediaDevices){

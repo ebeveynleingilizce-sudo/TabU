@@ -65,6 +65,24 @@ test('harmonic energy at a later string fundamental is rejected without a fresh 
   assert.equal(hit?.index,3,'the actual e-string attack can still be detected over the harmonic');
 });
 
+test('a real upper-string onset is accepted when bass harmonics mask its fundamental delta',()=>{
+  const detector=new TargetFrequencyDeltaDetector(),target={id:4,index:4,string:'B',frequency:246.94};
+  // E2's 3rd/6th/9th partials sit almost on B3 and its upper partials. The new
+  // B-string attack is deliberately phase-opposed and quieter than the ringing
+  // bass partial, so a strict positive dB-delta gate rejects it.
+  const bass=[[82.41,.14],[247.23,.04],[329.64,.025],[412.05,.015],[494.46,.01],[741.69,.008]];
+  for(const time of [0,.016,.032,.048])detector.push(frame(time,bass),sampleRate,[target],time*1000,{bassActive:true,transient:false});
+  const hit=detector.push(frame(.064,[...bass,[246.94,.008,Math.PI]]),sampleRate,[target],64,{bassActive:true,transient:true});
+  assert.equal(hit?.index,4,'fresh onset at the scheduled target should survive harmonic masking and gain clamping');
+  assert.equal(hit?.bassMasked,true,'diagnostics should identify the bass-masked fallback');
+});
+
+test('bass harmonics alone never advance an upper target without a fresh onset',()=>{
+  const detector=new TargetFrequencyDeltaDetector(),target={id:5,index:5,string:'e',frequency:329.63},bass=[[82.41,.14],[247.23,.04],[329.64,.025],[494.46,.01]];
+  for(const time of [0,.016,.032,.048])detector.push(frame(time,bass),sampleRate,[target],time*1000,{bassActive:true,transient:false});
+  assert.equal(detector.push(frame(.064,bass),sampleRate,[target],64,{bassActive:true,transient:false}),null);
+});
+
 test('arpeggio analysis record: bass + G/B/e attacks produce no false positives or misses',()=>{
   const detector=new TargetFrequencyDeltaDetector(),monitor=new ArpeggioAudioMonitor(),notes=[
     {id:0,index:0,string:'E',frequency:82.41},
