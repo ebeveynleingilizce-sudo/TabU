@@ -116,6 +116,12 @@ test('landscape practice fits the viewport and keeps only core controls',async({
   await expect(page.locator('.bpm-control')).toBeHidden();
   await expect(page.locator('[data-action="edit-tab"]')).toBeHidden();
   await expect(page.locator('.timeboard-wrap')).toBeVisible();
+  await expect(page.locator('.practice-topline #exercise-select')).toHaveCount(0);
+  await expect(page.locator('.classroom-title #exercise-select')).toBeVisible();
+  const tabBoxes=await page.locator('.practice-category').evaluateAll(items=>items.map(item=>{const box=item.getBoundingClientRect();return {left:box.left,right:box.right,top:box.top}}));
+  for(let index=1;index<tabBoxes.length;index++)expect(tabBoxes[index].left).toBeGreaterThanOrEqual(tabBoxes[index-1].right-1);
+  const speedBox=await page.locator('.practice-speed-control').boundingBox();expect(tabBoxes.at(-1).right).toBeLessThanOrEqual(speedBox.x+1);
+  expect(Math.abs(speedBox.y-tabBoxes[0].top)).toBeLessThan(4);
   await expect(page.locator('#audio-speed-select')).toBeVisible();
   await expect(page.locator('.classroom-meter')).toBeVisible();
   const overflow=await page.evaluate(()=>document.documentElement.scrollHeight>window.innerHeight||document.body.scrollHeight>window.innerHeight);

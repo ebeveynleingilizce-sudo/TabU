@@ -62,7 +62,7 @@
 
 .time-note.missed{background:#646773;color:#f2f2f4;box-shadow:0 0 0 2px #a3a6b0aa}.practice-result-notes{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;max-width:100%;padding:7px 0}.practice-result-note{display:grid;place-items:center;min-width:30px;height:32px;padding:0 6px;border-radius:7px;background:#f0f3f7;color:#121520;font:700 13px var(--mono)}.practice-result-note.correct{background:#36e5d0;color:#062020;box-shadow:0 0 9px #36e5d088}.practice-result-note.wrong{background:#fa777e;color:#300e13;box-shadow:0 0 8px #fa777e88}.practice-result-note.missed{background:#646773;color:#f2f2f4;box-shadow:0 0 0 1px #a3a6b0aa}
 
-@media(min-width:761px) and (max-width:900px){.practice-topline select{min-width:0}.practice-topline{gap:8px}}@media(max-width:900px){.app-shell.practice-focus .practice-topline{display:flex;flex-wrap:wrap;align-items:center}.app-shell.practice-focus .practice-topline>.practice-categories{order:0;flex:1 0 100%;position:relative;z-index:2}.app-shell.practice-focus .practice-topline>.practice-exercise-picker{order:1;position:relative;z-index:1;flex:1 1 140px;min-width:120px}.app-shell.practice-focus .practice-topline>.practice-speed-control{order:2}.app-shell.practice-focus .practice-topline>.note-display-control{order:3}.app-shell.practice-focus .practice-topline>.bpm-control{order:4}}
+@media(min-width:761px) and (max-width:900px){.practice-topline select{min-width:0}.practice-topline{gap:8px}}@media(max-width:900px){.app-shell.practice-focus .practice-topline{display:flex;flex-wrap:wrap;align-items:center}.app-shell.practice-focus .practice-topline>.practice-categories{order:0;flex:1 0 100%;position:relative;z-index:2}.app-shell.practice-focus .practice-topline>.practice-speed-control{order:2}.app-shell.practice-focus .practice-topline>.note-display-control{order:3}.app-shell.practice-focus .practice-topline>.bpm-control{order:4}}
 
 .fretboard-player.mic-active .classroom-meter{display:flex;align-items:center;gap:12px;margin-top:8px;padding-top:8px;border-top:1px solid #252737}.fretboard-player.mic-active .classroom-meter .meter{height:7px;background:#282b38;border-radius:6px;overflow:hidden}.fretboard-player.mic-active .classroom-meter .meter i{min-width:2px;background:linear-gradient(90deg,#76a9ff,#36e5d0);transition:width .06s linear}
 
@@ -78,7 +78,7 @@
   .app-shell.practice-focus .practice-topline>label,.app-shell.practice-focus .practice-topline .note-display-control,.app-shell.practice-focus .practice-topline .bpm-control,.app-shell.practice-focus .practice-topline .editor-shortcut{display:none!important}
   .app-shell.practice-focus .practice-topline #exercise-select{display:block;flex:1;width:100%;max-width:none;min-height:30px;padding:5px 9px;font-size:11px}
   .app-shell.practice-focus .fretboard-player{display:flex;flex:1;flex-direction:column;min-height:0;padding:0 9px 3px;overflow:hidden}
-  .app-shell.practice-focus .fretboard-player .classroom-title,.app-shell.practice-focus .practice-feedback,.app-shell.practice-focus .metronome-row,.app-shell.practice-focus .practice-audio,.app-shell.practice-focus .fretboard-caption,.app-shell.practice-focus .expected-panel,.app-shell.practice-focus .classroom-instruction,.app-shell.practice-focus .classroom-tip,.app-shell.practice-focus .audio-debug{display:none!important}
+  .app-shell.practice-focus .practice-feedback,.app-shell.practice-focus .metronome-row,.app-shell.practice-focus .practice-audio,.app-shell.practice-focus .fretboard-caption,.app-shell.practice-focus .expected-panel,.app-shell.practice-focus .classroom-instruction,.app-shell.practice-focus .classroom-tip,.app-shell.practice-focus .audio-debug{display:none!important}
   .app-shell.practice-focus .fretboard-player>.audio-speed-control{display:flex;flex:none;align-self:flex-end;align-items:center;gap:5px;margin:0 0 2px;font-size:8px}
   .app-shell.practice-focus .fretboard-player>.audio-speed-control select{padding:3px 7px;font-size:10px}
   .app-shell.practice-focus .timeboard-wrap{flex:1 1 0;height:auto;min-height:0;max-height:none;width:calc(100% + 18px);margin:0 -9px 3px}
@@ -160,17 +160,19 @@
 .practice-categories{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
 .practice-category{display:flex;align-items:center;justify-content:center;gap:7px;flex:1;min-width:0;min-height:42px;padding:7px 10px;border:1px solid #292a39;border-radius:24px;background:#151620;color:#d9d8e4;font:600 12px var(--sans);white-space:nowrap;touch-action:manipulation}
 .practice-category>span{font-size:16px}.practice-category.active{border-color:transparent;background:linear-gradient(110deg,#7627ee,#5478f5);color:#fff;box-shadow:0 5px 18px #6040ee44}
-.practice-exercise-picker{display:flex;flex:0 1 180px;min-width:90px}.practice-exercise-picker select{width:100%;max-width:none!important;min-width:0;background:#171721;color:var(--text);border:1px solid #303246;border-radius:20px;padding:9px 10px;font:11px var(--sans)}
+.practice-exercise-picker{display:flex;flex:0 1 180px;min-width:90px}.classroom-title .practice-exercise-picker{display:flex;flex:0 1 240px;min-width:100px}.practice-exercise-picker select{width:100%;max-width:none!important;min-width:0;background:#171721;color:var(--text);border:1px solid #303246;border-radius:20px;padding:9px 10px;font:11px var(--sans)}
 .practice-topline>.practice-speed-control{display:flex;flex:none;align-items:center;gap:7px;margin:0;padding:5px 8px;border:1px solid #292a39;border-radius:20px;background:#151620;color:#aaaabc;font:9px var(--sans);letter-spacing:.6px}
 .practice-speed-control select{width:70px;max-width:none!important;flex:none!important;padding:6px 8px!important;border-radius:14px!important}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(orientation:landscape) and (max-height:540px){
-  .app-shell.practice-focus .practice-topline{gap:12px;min-height:48px;margin:0 0 5px;padding:0 4px}
+  .app-shell.practice-focus .practice-topline{display:flex;flex-wrap:nowrap;gap:12px;min-height:48px;margin:0 0 5px;padding:0 4px}
   .app-shell.practice-focus .practice-topline>.practice-categories{flex:1;gap:6px}
   .app-shell.practice-focus .practice-category{min-height:42px;padding:6px 9px;font-size:clamp(10px,1.4vw,14px)}
   .app-shell.practice-focus .practice-category>span{font-size:clamp(13px,1.7vw,19px)}
-  .app-shell.practice-focus .practice-exercise-picker{flex:0 1 170px;min-width:80px}
-  .app-shell.practice-focus .practice-exercise-picker select{min-height:36px;padding:5px 9px;font-size:clamp(10px,1.3vw,13px)}
+  .app-shell.practice-focus .classroom-title{margin:0 0 4px;align-items:center}
+  .app-shell.practice-focus .classroom-title h1,.app-shell.practice-focus .classroom-title p,.app-shell.practice-focus .classroom-title .level-badge{display:none}
+  .app-shell.practice-focus .classroom-title .practice-exercise-picker{display:flex;flex:0 1 220px;min-width:100px}
+  .app-shell.practice-focus .classroom-title .practice-exercise-picker select{min-height:30px;padding:4px 9px;font-size:clamp(10px,1.3vw,13px)}
   .app-shell.practice-focus .practice-topline>.practice-speed-control{display:flex!important;align-self:center;margin:0;padding:4px 8px;font-size:clamp(8px,1.2vw,11px)}
   .app-shell.practice-focus .practice-topline>.practice-speed-control select{width:62px;min-height:30px;padding:4px 7px!important;font-size:clamp(10px,1.3vw,13px)}
   .app-shell.practice-focus .practice-topline>.note-display-control,.app-shell.practice-focus .practice-topline>.bpm-control,.app-shell.practice-focus .practice-topline>.editor-shortcut{display:none!important}
@@ -191,8 +193,8 @@
   .app-shell.practice-focus .practice-topline>.practice-categories{gap:4px}
   .app-shell.practice-focus .practice-category{gap:3px;min-height:34px;padding:4px 5px;font-size:9px}
   .app-shell.practice-focus .practice-category>span{font-size:12px}
-  .app-shell.practice-focus .practice-exercise-picker{flex:0 1 105px;min-width:60px}
-  .app-shell.practice-focus .practice-exercise-picker select{min-height:30px;padding:3px 5px;font-size:9px}
+  .app-shell.practice-focus .classroom-title .practice-exercise-picker{flex:0 1 150px;min-width:76px}
+  .app-shell.practice-focus .classroom-title .practice-exercise-picker select{min-height:28px;padding:3px 6px;font-size:9px}
   .app-shell.practice-focus .practice-topline>.practice-speed-control{gap:3px;padding:3px 5px;font-size:7px}
   .app-shell.practice-focus .practice-topline>.practice-speed-control select{width:48px;min-height:26px;padding:3px 4px!important;font-size:9px}
   .app-shell.practice-focus .fretboard-actions{gap:14px;min-height:58px;padding:4px 8px;border-radius:20px}
@@ -203,7 +205,7 @@
 .fretboard-actions .control-icon{display:none}
 @media(orientation:landscape) and (max-height:540px){.app-shell.practice-focus .fretboard-actions .control-icon{display:inline-block}}
 
-@media(orientation:landscape) and (max-height:540px){.app-shell.practice-focus .practice-topline>.practice-exercise-picker{display:flex!important}.app-shell.practice-focus .fretboard-actions .primary-button:after{content:"▶";font-size:29px;line-height:1}}
+@media(orientation:landscape) and (max-height:540px){.app-shell.practice-focus .fretboard-actions .primary-button:after{content:"▶";font-size:29px;line-height:1}}
 
 .practice-result-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;margin-top:5px}
 .practice-result-actions button{width:100%;min-width:0;min-height:44px;margin:0}
