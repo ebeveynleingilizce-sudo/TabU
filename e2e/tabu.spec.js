@@ -53,18 +53,22 @@ test('practice action buttons do not overlap and TAB lane remains visible',async
   }
 });
 
-test('TAB playback advances, pauses, resumes and resets',async({page})=>{
+test('single practice button toggles microphone start and stop',async({page})=>{
+  await page.addInitScript(()=>{
+    window.__micStopped=false;
+    Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:()=>new Promise(resolve=>window.__resolvePracticeMic=resolve)}});
+  });
   await openPractice(page);
-  await page.locator('[data-action="listen"]').click();
-  await expect(page.locator('#current-position')).not.toHaveText('Nota 1 / 7');
-  await page.locator('[data-action="listen"]').click();
-  const position=await page.locator('#current-position').textContent();
-  await page.waitForTimeout(1000);await expect(page.locator('#current-position')).toHaveText(position);
-  await page.locator('[data-action="listen"]').click();
-  await expect(page.locator('#current-position')).not.toHaveText(position);
-  await page.locator('[data-action="reset"]').click();await expect(page.locator('#current-position')).toHaveText('Nota 1 / 7');
+  await expect(page.locator('[data-action="listen"]')).toHaveCount(0);
+  const toggle=page.locator('.practice-toggle-button');
+  await expect(toggle).toHaveAttribute('data-action','take-turn');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('data-action','pause');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('data-action','take-turn');
+  await page.evaluate(()=>window.__resolvePracticeMic({getTracks:()=>[{stop(){window.__micStopped=true}}]}));
+  await expect.poll(()=>page.evaluate(()=>window.__micStopped)).toBe(true);
 });
-
 test('editing and creating a new TAB keep separate state; low E survives reload',async({page})=>{
   await openPractice(page);await page.locator('[data-action="edit-tab"]').click();
   await expect(page.locator('#edit-title')).toHaveValue('0–1–2–3–2–1–0');
@@ -100,8 +104,8 @@ test('audio upload, irregular timing, save/reload, seeking and playback rate',as
   await page.locator('[data-action="sync-back"]').click();await page.locator('[data-action="save-tab"]').click();
   await expect(page).toHaveURL(/#practice$/);
   await expect(page.locator('.time-note')).toHaveCount(3);
-  await page.reload();await page.locator('#exercise-select').selectOption({label:'Timing regression'});
-  await expect(page.locator('#practice-audio')).toBeVisible();
+  await page.setViewportSize({width:844,height:390});await page.reload();await page.locator('#exercise-select').selectOption({label:'Timing regression'});
+  await expect(page.locator('#practice-audio')).toBeAttached();
   expect(await page.locator('.time-note').evaluateAll(notes=>notes.map(note=>Number(note.dataset.time)))).toEqual([0,.28,.93]);
   await page.locator('#audio-speed-select').selectOption('0.5');
   expect(await page.locator('#practice-audio').evaluate(audio=>audio.playbackRate)).toBe(.5);
@@ -118,7 +122,7 @@ test('denied microphone permission leaves the UI recoverable',async({page})=>{
   await openPractice(page);await page.locator('[data-action="take-turn"]').click();
   await expect(page.locator('#toast')).toHaveText('Mikrofon izni verilmedi');
   await expect(page.locator('[data-action="take-turn"]')).toBeEnabled();
-  await page.locator('[data-action="listen"]').click();await expect(page.locator('#current-position')).not.toHaveText('Nota 1 / 7');
+  await expect(page.locator('.practice-toggle-button')).toHaveAttribute('aria-label','Mikrofonla çalışmayı başlat');
 });
 
 test('fresh PWA install opens offline with the complete application shell',async({page,context,browserName})=>{

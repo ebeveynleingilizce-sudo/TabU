@@ -208,3 +208,7 @@
 .practice-result-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;margin-top:5px}
 .practice-result-actions button{width:100%;min-width:0;min-height:44px;margin:0}
 @media(orientation:landscape) and (max-height:540px){.app-shell.practice-focus:has(.practice-result) .view{overflow-y:auto}.app-shell.practice-focus:has(.practice-result) .fretboard-player{display:block;flex:none;overflow:visible}.app-shell.practice-focus:has(.practice-result) .timeboard-wrap,.app-shell.practice-focus:has(.practice-result) .fretboard-actions{display:none!important}.app-shell.practice-focus:has(.practice-result) .practice-result{margin:4px 0;padding:12px;gap:6px}}
+
+/* One accessible play/stop control replaces separate listen and mic buttons. */
+.app-shell.practice-focus .fretboard-actions .practice-toggle-button .control-icon{display:inline-block!important;position:static;width:auto;height:auto;clip:auto;overflow:visible}
+.app-shell.practice-focus .fretboard-actions .practice-toggle-button:after{content:none!important}
