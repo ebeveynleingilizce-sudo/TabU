@@ -139,6 +139,32 @@ test('fresh PWA install opens offline with the complete application shell',async
   await expect(page.locator('.time-note')).toHaveCount(7);
 });
 
+test('TAB editor exposes create, mark, tempo delete, save, and selected-note delete actions',async({page})=>{
+  await openPractice(page);
+  await page.locator('.editor-shortcut[data-route="editor"]').click();
+  await expect(page.getByRole('button',{name:/TAB oluştur/})).toBeVisible();
+  await expect(page.getByRole('button',{name:'İşaretle'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Tempoyu sil'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Kaydet'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Seçili notayı sil'})).toBeVisible();
+
+  await page.locator('#edit-string').selectOption('e');await page.locator('#edit-fret').fill('0');
+  await page.getByRole('button',{name:/TAB oluştur/}).click();
+  await page.locator('#edit-string').selectOption('B');await page.locator('#edit-fret').fill('1');
+  await page.getByRole('button',{name:/TAB oluştur/}).click();
+  await page.locator('#editor-audio-file').setInputFiles({name:'editor-actions.wav',mimeType:'audio/wav',buffer:wav()});
+  await page.getByRole('button',{name:'İşaretle'}).click();
+  await expect(page.locator('[data-action="sync-mark"]')).toBeEnabled();
+  await page.locator('[data-action="sync-mark"]').click();
+  await page.locator('[data-action="sync-back"]').click();
+  await page.locator('#editor-sequence-list [data-editor-index="0"]').click();
+  await page.getByRole('button',{name:'Tempoyu sil'}).click();
+  await expect(page.locator('#toast')).toHaveText('Seçili notanın temposu silindi');
+  await page.locator('#editor-sequence-list [data-editor-index="1"]').click();
+  await page.getByRole('button',{name:'Seçili notayı sil'}).click();
+  await expect(page.locator('#editor-sequence-list [data-editor-index]')).toHaveCount(1);
+});
+
 test('custom TABs save to the selected practice category and remain filterable',async({page})=>{
   await openPractice(page);
   await page.locator('.editor-shortcut[data-route="editor"]').click();
