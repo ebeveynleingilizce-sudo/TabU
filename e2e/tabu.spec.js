@@ -162,6 +162,9 @@ test('TAB editor exposes create, mark, tempo delete, save, and selected-note del
   await expect(page.getByRole('button',{name:'İşaretle'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Tempoyu sil'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Kaydet'})).toBeVisible();
+  await expect(page.getByText('Nereye kaydedilsin?')).toBeVisible();
+  await expect(page.locator('#save-category')).toBeVisible();
+  await expect(page.locator('#save-category option')).toHaveCount(4);
   await expect(page.getByRole('button',{name:'Seçili notayı sil'})).toBeVisible();
 
   await page.locator('#edit-string').selectOption('e');await page.locator('#edit-fret').fill('0');
