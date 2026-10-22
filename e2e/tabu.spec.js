@@ -139,6 +139,35 @@ test('fresh PWA install opens offline with the complete application shell',async
   await expect(page.locator('.time-note')).toHaveCount(7);
 });
 
+test('custom TABs save to the selected practice category and remain filterable',async({page})=>{
+  await openPractice(page);
+  await page.locator('.editor-shortcut[data-route="editor"]').click();
+  await page.locator('#edit-title').fill('Ritm kaydı');
+  await page.locator('#edit-string').selectOption('e');await page.locator('#edit-fret').fill('0');
+  await page.locator('[data-action="add-note"]').click();
+  await page.locator('#save-category').selectOption('rhythm');
+  await page.locator('[data-action="save-tab"]').click();
+  await expect(page.locator('.practice-category[data-category="rhythm"]')).toHaveClass(/active/);
+  await expect(page.locator('#exercise-select option[value^="custom-"]')).toHaveText('Ritm kaydı');
+  const rhythm=await page.evaluate(()=>JSON.parse(localStorage.getItem('tabu-custom-tabs')||'[]').find(item=>item.title==='Ritm kaydı'));
+  expect(rhythm.category).toBe('rhythm');
+
+  await page.locator('.editor-shortcut[data-route="editor"]').click();
+  await page.locator('#edit-title').fill('Arpej kaydı');
+  await page.locator('#edit-string').selectOption('B');await page.locator('#edit-fret').fill('1');
+  await page.locator('[data-action="add-note"]').click();
+  await page.locator('#save-category').selectOption('arpeggio');
+  await expect(page.locator('#edit-mode')).toHaveValue('arpeggio');
+  await page.locator('[data-action="save-tab"]').click();
+  await expect(page.locator('.practice-category[data-category="arpeggio"]')).toHaveClass(/active/);
+  await expect(page.locator('#exercise-select option[value^="custom-"]')).toHaveText('Arpej kaydı');
+  const arpeggio=await page.evaluate(()=>JSON.parse(localStorage.getItem('tabu-custom-tabs')||'[]').find(item=>item.title==='Arpej kaydı'));
+  expect(arpeggio.category).toBe('arpeggio');expect(arpeggio.mode).toBe('arpeggio');
+
+  await page.locator('.practice-category[data-category="rhythm"]').click();
+  await expect(page.locator('#exercise-select option[value^="custom-"]')).toHaveText('Ritm kaydı');
+});
+
 test('custom TAB saves chord mode, groups same-time notes, and restores the mode for editing',async({page})=>{
   await openPractice(page);
   await page.locator('.editor-shortcut[data-route="editor"]').click();
