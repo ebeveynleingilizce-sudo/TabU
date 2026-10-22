@@ -139,6 +139,15 @@ test('fresh PWA install opens offline with the complete application shell',async
   await expect(page.locator('.time-note')).toHaveCount(7);
 });
 
+test('portrait TAB entry prompt offers direct TAB creation',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/#practice');
+  await expect(page.locator('.portrait-rotate-prompt')).toBeVisible();
+  await page.locator('.portrait-rotate-prompt').getByRole('button',{name:/TAB oluştur/}).click();
+  await expect(page.locator('#edit-title')).toBeVisible();
+  await expect(page.locator('[data-action="add-note"]')).toHaveText('＋ TAB oluştur');
+});
+
 test('practice screen labels the new TAB entry clearly',async({page})=>{
   await openPractice(page);
   await expect(page.locator('.editor-shortcut[data-route="editor"]')).toHaveText('＋ TAB oluştur');
