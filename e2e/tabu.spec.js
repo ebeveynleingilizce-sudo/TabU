@@ -139,6 +139,13 @@ test('fresh PWA install opens offline with the complete application shell',async
   await expect(page.locator('.time-note')).toHaveCount(7);
 });
 
+test('practice screen labels the new TAB entry clearly',async({page})=>{
+  await openPractice(page);
+  await expect(page.locator('.editor-shortcut[data-route="editor"]')).toHaveText('＋ TAB oluştur');
+  await page.locator('.editor-shortcut[data-route="editor"]').click();
+  await expect(page.locator('[data-action="add-note"]')).toHaveText('＋ TAB oluştur');
+});
+
 test('TAB editor exposes create, mark, tempo delete, save, and selected-note delete actions',async({page})=>{
   await openPractice(page);
   await page.locator('.editor-shortcut[data-route="editor"]').click();
