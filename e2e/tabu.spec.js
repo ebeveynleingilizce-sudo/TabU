@@ -1,5 +1,12 @@
 import {test,expect,openPractice,wav} from './fixtures.js';
 
+async function saveTabTo(page,category='solo'){
+  await page.locator('[data-action="save-tab"]').click();
+  const dialog=page.getByRole('dialog',{name:'TAB nereye kaydedilsin?'});
+  await expect(dialog).toBeVisible();
+  await dialog.locator('[data-action="save-tab-category"][data-category="'+category+'"]').click();
+}
+
 test('app loads and navigation renders the main interface',async({page})=>{
   const response=await page.goto('/');expect(response.ok()).toBeTruthy();
   await expect(page.locator('.home-hero')).toBeVisible();
@@ -78,7 +85,7 @@ test('editing and creating a new TAB keep separate state; low E survives reload'
   await expect(page.locator('.editor-note-chip')).toHaveCount(0);
   await page.locator('#edit-title').fill('E2 regression');await page.locator('#edit-string').selectOption('E');
   for(const fret of [0,12,22]){await page.locator('#edit-fret').fill(String(fret));await page.locator('[data-action="add-note"]').click()}
-  await page.locator('[data-action="save-tab"]').click();await expect(page.locator('.time-note')).toHaveCount(3);
+  await saveTabTo(page,'solo');await expect(page.locator('.time-note')).toHaveCount(3);
   await page.reload();await page.locator('#exercise-select').selectOption({label:'E2 regression'});
   await expect(page.locator('.timeboard-row[data-string="E"] .time-note')).toHaveText(['0','12','22']);
 });
@@ -101,7 +108,7 @@ test('audio upload, irregular timing, save/reload, seeking and playback rate',as
     await page.locator('[data-action="sync-mark"]').click();
   }
   await expect(page.locator('#sync-progress')).toHaveText('3 / 3');
-  await page.locator('[data-action="sync-back"]').click();await page.locator('[data-action="save-tab"]').click();
+  await page.locator('[data-action="sync-back"]').click();await saveTabTo(page,'solo');
   await expect(page).toHaveURL(/#practice$/);
   await expect(page.locator('.time-note')).toHaveCount(3);
   await page.setViewportSize({width:844,height:390});await page.reload();await page.locator('#exercise-select').selectOption({label:'Timing regression'});
@@ -162,13 +169,15 @@ test('TAB editor exposes create, mark, tempo delete, save, and selected-note del
   await expect(page.getByRole('button',{name:'İşaretle'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Tempoyu sil'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Kaydet'})).toBeVisible();
-  await expect(page.getByText('Nereye kaydedilsin?')).toBeVisible();
-  await expect(page.locator('#save-category')).toBeVisible();
-  await expect(page.locator('#save-category option')).toHaveCount(4);
+  await expect(page.locator('.editor-save-destination')).toContainText('Kaydet’e dokun');
   await expect(page.getByRole('button',{name:'Seçili notayı sil'})).toBeVisible();
 
   await page.locator('#edit-string').selectOption('e');await page.locator('#edit-fret').fill('0');
   await page.getByRole('button',{name:/TAB oluştur/}).click();
+  await page.locator('[data-action="save-tab"]').click();
+  await expect(page.getByRole('dialog',{name:'TAB nereye kaydedilsin?'})).toBeVisible();
+  await expect(page.locator('#save-category-dialog .save-category-option')).toHaveCount(4);
+  await page.locator('[data-action="cancel-save-category"]').click();
   await page.locator('#edit-string').selectOption('B');await page.locator('#edit-fret').fill('1');
   await page.getByRole('button',{name:/TAB oluştur/}).click();
   await page.locator('#editor-audio-file').setInputFiles({name:'editor-actions.wav',mimeType:'audio/wav',buffer:wav()});
@@ -190,8 +199,7 @@ test('custom TABs save to the selected practice category and remain filterable',
   await page.locator('#edit-title').fill('Ritm kaydı');
   await page.locator('#edit-string').selectOption('e');await page.locator('#edit-fret').fill('0');
   await page.locator('[data-action="add-note"]').click();
-  await page.locator('#save-category').selectOption('rhythm');
-  await page.locator('[data-action="save-tab"]').click();
+  await saveTabTo(page,'rhythm');
   await expect(page.locator('.practice-category[data-category="rhythm"]')).toHaveClass(/active/);
   await expect(page.locator('#exercise-select option[value^="custom-"]')).toHaveText('Ritm kaydı');
   const rhythm=await page.evaluate(()=>JSON.parse(localStorage.getItem('tabu-custom-tabs')||'[]').find(item=>item.title==='Ritm kaydı'));
@@ -201,9 +209,8 @@ test('custom TABs save to the selected practice category and remain filterable',
   await page.locator('#edit-title').fill('Arpej kaydı');
   await page.locator('#edit-string').selectOption('B');await page.locator('#edit-fret').fill('1');
   await page.locator('[data-action="add-note"]').click();
-  await page.locator('#save-category').selectOption('arpeggio');
-  await expect(page.locator('#edit-mode')).toHaveValue('arpeggio');
-  await page.locator('[data-action="save-tab"]').click();
+  await expect(page.locator('#edit-mode')).toHaveValue('solo');
+  await saveTabTo(page,'arpeggio');
   await expect(page.locator('.practice-category[data-category="arpeggio"]')).toHaveClass(/active/);
   await expect(page.locator('#exercise-select option[value^="custom-"]')).toHaveText('Arpej kaydı');
   const arpeggio=await page.evaluate(()=>JSON.parse(localStorage.getItem('tabu-custom-tabs')||'[]').find(item=>item.title==='Arpej kaydı'));
@@ -223,7 +230,7 @@ test('custom TAB saves chord mode, groups same-time notes, and restores the mode
   await page.locator('[data-action="add-note"]').click();
   await page.locator('#edit-string').selectOption('B');await page.locator('#edit-fret').fill('1');
   await page.locator('[data-action="add-note"]').click();
-  await page.locator('[data-action="save-tab"]').click();
+  await saveTabTo(page,'chord');
   await expect(page.locator('#exercise-select')).toBeVisible();
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('tabu-custom-tabs')||'[]').find(tab=>tab.title==='Chord mode E2E'));
   expect(saved.mode).toBe('chord');
