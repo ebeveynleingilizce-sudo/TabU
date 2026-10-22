@@ -220,6 +220,30 @@ test('custom TABs save to the selected practice category and remain filterable',
   await expect(page.locator('#exercise-select option[value^="custom-"]')).toHaveText('Ritm kaydı');
 });
 
+test('practice category arrows expand all exercises and let the learner choose one',async({page})=>{
+  await openPractice(page);
+  const titles=['Solo liste 1','Solo liste 2','Solo liste 3'];
+  for(const [index,title] of titles.entries()){
+    await page.locator('.editor-shortcut[data-route="editor"]').click();
+    await page.locator('#edit-title').fill(title);
+    await page.locator('#edit-string').selectOption(index===1?'B':'e');
+    await page.locator('#edit-fret').fill(String(index));
+    await page.locator('[data-action="add-note"]').click();
+    await saveTabTo(page,'solo');
+  }
+
+  const soloTab=page.locator('.practice-category[data-category="solo"]');
+  await soloTab.click();
+  await expect(soloTab).toHaveAttribute('aria-expanded','true');
+  const menu=page.locator('[data-category-menu="solo"]');
+  await expect(menu).toBeVisible();
+  for(const title of titles)await expect(menu.locator('.practice-exercise-option',{hasText:title})).toHaveCount(1);
+  await menu.locator('.practice-exercise-option',{hasText:'Solo liste 2'}).click();
+  await expect(soloTab).toHaveAttribute('aria-expanded','false');
+  await expect(page.locator('#exercise-select')).toHaveValue(/custom-/);
+  await expect(page.locator('.classroom-title h1')).toHaveText('Solo liste 2');
+});
+
 test('custom TAB saves chord mode, groups same-time notes, and restores the mode for editing',async({page})=>{
   await openPractice(page);
   await page.locator('.editor-shortcut[data-route="editor"]').click();
