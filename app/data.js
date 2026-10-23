@@ -11,6 +11,7 @@ export const exercises=[
 ];
 try{for(const saved of JSON.parse(localStorage.getItem('tabu-tab-overrides')||'[]')){const original=exercises.find(item=>item.id===saved.id);if(original)Object.assign(original,saved)}}catch{}
 try{exercises.push(...JSON.parse(localStorage.getItem('tabu-custom-tabs')||'[]'))}catch{}
+try{const deleted=new Set(JSON.parse(localStorage.getItem('tabu-deleted-exercise-ids')||'[]'));for(let i=exercises.length-1;i>=0;i--)if(deleted.has(exercises[i].id))exercises.splice(i,1)}catch{}
 export const lessons=[
  ['6 tel nasıl okunur?','TAB satırları gitar tellerini temsil eder. En üstteki e ince Mi, en alttaki E kalın Mi telidir.','e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|'],
  ['Perde numaraları ne anlama gelir?','Sayı, basman gereken perdeyi söyler. 3 yazıyorsa üçüncü perdeye bas.','e|--1--2--3--4--|'],

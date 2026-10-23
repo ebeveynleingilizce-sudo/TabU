@@ -244,14 +244,24 @@ test('practice category arrows expand all exercises and let the learner choose o
   await expect(page.locator('.classroom-title h1')).toHaveText('Solo liste 2');
 
   await soloTab.click();
-  await expect(menu.locator('.practice-exercise-delete')).toHaveCount(3);
-  const builtInRow=menu.locator('.practice-exercise-option:not([data-id^="custom-"])').first().locator('xpath=..');
-  await expect(builtInRow.locator('.practice-exercise-delete')).toHaveCount(0);
-  page.once('dialog',dialog=>dialog.accept());
+  await expect(menu.locator('.practice-exercise-delete')).toHaveCount(await menu.locator('.practice-exercise-option').count());
+  await page.once('dialog',dialog=>dialog.accept());
   await menu.locator('.practice-exercise-option',{hasText:'Solo liste 1'}).locator('xpath=..').locator('.practice-exercise-delete').click();
   await expect(menu.locator('.practice-exercise-option',{hasText:'Solo liste 1'})).toHaveCount(0);
   const savedTitles=await page.evaluate(()=>JSON.parse(localStorage.getItem('tabu-custom-tabs')||'[]').map(tab=>tab.title));
   expect(savedTitles).not.toContain('Solo liste 1');
+
+  const builtInOption=menu.locator('.practice-exercise-option[data-id="frets-0123"]');
+  await expect(builtInOption).toBeVisible();
+  page.once('dialog',dialog=>dialog.accept());
+  await builtInOption.locator('xpath=..').locator('.practice-exercise-delete').click();
+  await expect(menu.locator('.practice-exercise-option[data-id="frets-0123"]')).toHaveCount(0);
+  const deletedIds=await page.evaluate(()=>JSON.parse(localStorage.getItem('tabu-deleted-exercise-ids')||'[]'));
+  expect(deletedIds).toContain('frets-0123');
+  await page.reload();
+  await expect(page.locator('#exercise-select')).toBeVisible();
+  await page.locator('.practice-category[data-category="solo"]').click();
+  await expect(page.locator('[data-category-menu="solo"] .practice-exercise-option[data-id="frets-0123"]')).toHaveCount(0);
 });
 
 test('custom TAB saves chord mode, groups same-time notes, and restores the mode for editing',async({page})=>{
