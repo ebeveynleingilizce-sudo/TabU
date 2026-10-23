@@ -242,6 +242,16 @@ test('practice category arrows expand all exercises and let the learner choose o
   await expect(soloTab).toHaveAttribute('aria-expanded','false');
   await expect(page.locator('#exercise-select')).toHaveValue(/custom-/);
   await expect(page.locator('.classroom-title h1')).toHaveText('Solo liste 2');
+
+  await soloTab.click();
+  await expect(menu.locator('.practice-exercise-delete')).toHaveCount(3);
+  const builtInRow=menu.locator('.practice-exercise-option:not([data-id^="custom-"])').first().locator('xpath=..');
+  await expect(builtInRow.locator('.practice-exercise-delete')).toHaveCount(0);
+  page.once('dialog',dialog=>dialog.accept());
+  await menu.locator('.practice-exercise-option',{hasText:'Solo liste 1'}).locator('xpath=..').locator('.practice-exercise-delete').click();
+  await expect(menu.locator('.practice-exercise-option',{hasText:'Solo liste 1'})).toHaveCount(0);
+  const savedTitles=await page.evaluate(()=>JSON.parse(localStorage.getItem('tabu-custom-tabs')||'[]').map(tab=>tab.title));
+  expect(savedTitles).not.toContain('Solo liste 1');
 });
 
 test('custom TAB saves chord mode, groups same-time notes, and restores the mode for editing',async({page})=>{
