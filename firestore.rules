@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All student data and assignments are served through authenticated callables.
+    // This keeps student credentials, assignment checks and aggregates server-owned.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
+

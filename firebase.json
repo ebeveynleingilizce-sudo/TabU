@@ -1,0 +1,20 @@
+{
+  "functions": [{ "source": "functions", "codebase": "default", "runtime": "nodejs22", "predeploy": ["npm --prefix functions run build"], "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log", "*.local"] }],
+  "firestore": { "rules": "firestore.rules" },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Gitarist",
+        "supportEmail": "cmntunc@gmail.com",
+        "authorizedRedirectUris": [
+          "https://gitarist-fa850.firebaseapp.com/__/auth/handler",
+          "https://ebeveynleingilizce-sudo.github.io/TabU",
+          "http://localhost:8000"
+        ]
+      }
+    }
+  },
+  "emulators": { "auth": { "port": 9099 }, "functions": { "port": 5001 }, "firestore": { "port": 8080 }, "ui": { "enabled": true, "port": 4000 }, "singleProjectMode": true }
+}
+
