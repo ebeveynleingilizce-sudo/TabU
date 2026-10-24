@@ -183,7 +183,7 @@ async function initializeTeacher(user) {
   currentRole = 'teacher';
   activateWorkspace('teacher', user.uid);
   localStorage.setItem('tabu-classroom-role', 'teacher');
-  const [dataModule, remoteTabs] = await Promise.all([import('./data.js'), loadTeacherLibrary()]);
+  const [dataModule, remoteTabs] = await Promise.all([import('./data.js?v=3'), loadTeacherLibrary()]);
   api.exerciseData = dataModule;
   await mergeLibrary(remoteTabs);
   teacherData = { user, dashboard: null, detail: null, selectedStudentId: null };
@@ -200,7 +200,7 @@ async function initializeStudent(user) {
   localStorage.removeItem('tabu-tab-overrides');
   localStorage.removeItem('tabu-deleted-exercise-ids');
   if (location.hash === '#editor') history.replaceState(null, '', '#practice');
-  const dataModule = await import('./data.js');
+  const dataModule = await import('./data.js?v=3');
   api.exerciseData = dataModule;
   dataModule.exercises.splice(0, dataModule.exercises.length, ...catalog.tabs);
   teacherData = { user, catalog, selectedTabId: catalog.tabs[0]?.id || null };
