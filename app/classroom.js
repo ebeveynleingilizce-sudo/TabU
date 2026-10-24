@@ -5,7 +5,7 @@ const sdkVersion = '12.19.0';
 const sdk = name => import(`https://www.gstatic.com/firebasejs/${sdkVersion}/firebase-${name}.js`);
 const builtinIds = new Set(['open-strings', 'frets-0123', 'frets-0232', 'chromatic', 'simple-melody', 'string-switch', 'beginner-riff', 'fikrimin-ince-gulu']);
 let auth, functions, app, api, gate, currentRole = '', teacherData = null, launchResolver = null, lastSyncedTabs = '', teacherPreviewState = null, storageApi = null, storageInstance = null;
-const call = (name, data = {}) => api.callable(name, { timeout: 30_000 })(data).then(result => result.data);
+const call = (name, data = {}) => api.callable(name, { timeout: 65_000 })(data).then(result => result.data);
 function withTimeout(promise, timeoutMs, message) {
   let timer;
   return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), timeoutMs); })])
