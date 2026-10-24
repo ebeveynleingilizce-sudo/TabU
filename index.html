@@ -35,12 +35,13 @@
     window.addEventListener('appinstalled', () => { window.deferredInstallPrompt = null; });
   </script>
   <script type="module">
-    import { startClassroom } from './app/classroom.js?v=5';
+    import { startClassroom } from './app/classroom.js?v=6';
     await startClassroom();
     await import('./app/main.js?v=64');
   </script>
 </body>
 </html>
+
 
 
 

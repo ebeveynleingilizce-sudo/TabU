@@ -224,3 +224,5 @@
 
 .classroom-install-button{width:100%;min-height:46px;margin-top:18px;border-color:#57458a;color:#e0d2ff}.classroom-install-button:hover{background:#211936}
 
+.classroom-student-row>b{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.classroom-code-chip{display:inline-flex;align-items:center;padding:4px 7px;border:1px solid #514374;border-radius:7px;background:#211936;color:#d8c6ff!important;font-size:11px!important;font-weight:700}
+

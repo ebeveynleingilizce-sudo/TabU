@@ -26,7 +26,12 @@ test('sign-in screen always offers the browser PWA install flow without download
 
 test('teacher preview button renders as soon as a student is selected, even before detail data loads', () => {
   const classroom = readFileSync(new URL('../app/classroom.js', import.meta.url), 'utf8');
-  assert.match(classroom, /const previewAction = selectedStudentId \? `[^`]*data-classroom-action="preview-student"/);
+  assert.match(classroom, /const studentActions = selectedStudentId \? `[^`]*data-classroom-action="preview-student"/);
   assert.match(classroom, /teacherStudentDetail', \{ studentId: teacherData\.selectedStudentId \}/);
+});
+
+test('students with assigned TABs enter the practice screen without opening the song selector', () => {
+  const classroom = readFileSync(new URL('../app/classroom.js', import.meta.url), 'utf8');
+  assert.match(classroom, /if \(catalog\.tabs\.length\)[\s\S]*location\.hash !== '#practice'[\s\S]*launchResolver\?\.\(\)/);
 });
 

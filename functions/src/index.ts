@@ -1,4 +1,4 @@
-import { createHmac, randomInt } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, randomInt } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldPath, FieldValue, getFirestore } from 'firebase-admin/firestore';
@@ -18,6 +18,22 @@ const opts = { region: 'europe-west1', minInstances: 0, maxInstances: 3,
   enforceAppCheck: false, secrets: emulator ? [] : [hmacSecret] };
 const secret = () => emulator ? 'tabu-emulator-only-student-code-secret' : hmacSecret.value();
 const codeHash = (code: string) => createHmac('sha256', secret()).update(code).digest('hex');
+const codeEncryptionKey = () => createHmac('sha256', secret()).update('teacher-visible-student-code-v1').digest();
+function encryptStudentCode(code: string) {
+  const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', codeEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(code, 'utf8'), cipher.final()]);
+  return `v1:${iv.toString('base64url')}:${cipher.getAuthTag().toString('base64url')}:${encrypted.toString('base64url')}`;
+}
+function decryptStudentCode(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  try {
+    const [version, iv, tag, encrypted] = value.split(':');
+    if (version !== 'v1' || !iv || !tag || !encrypted) return null;
+    const decipher = createDecipheriv('aes-256-gcm', codeEncryptionKey(), Buffer.from(iv, 'base64url'));
+    decipher.setAuthTag(Buffer.from(tag, 'base64url'));
+    return Buffer.concat([decipher.update(Buffer.from(encrypted, 'base64url')), decipher.final()]).toString('utf8');
+  } catch { return null; }
+}
 const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 const newCode = () => Array.from({ length: 7 }, () => alphabet[randomInt(alphabet.length)]).join('');
 const teacherRoot = (uid: string) => db.collection('teachers').doc(uid);
@@ -85,7 +101,7 @@ export const createStudent = onCall(opts, async request => {
     const created = await db.runTransaction(async tx => {
       const existing = await tx.get(index);
       if (existing.exists) return false;
-      tx.create(ref, { studentId: ref.id, teacherUid: uid, displayName, codeHash: hash, status: 'active', credentialVersion: 1, createdAt: FieldValue.serverTimestamp() });
+      tx.create(ref, { studentId: ref.id, teacherUid: uid, displayName, codeHash: hash, codeCipher: encryptStudentCode(code), status: 'active', credentialVersion: 1, createdAt: FieldValue.serverTimestamp() });
       tx.create(ref.collection('analytics').doc('summary'), { sessions: 0, seconds: 0, correct: 0, evaluated: 0, tabsWorked: 0, lastWorkedAt: null, version: 1 });
       tx.create(index, { teacherUid: uid, studentId: ref.id, credentialVersion: 1, revoked: false });
       return true;
@@ -124,6 +140,28 @@ export const studentLogin = onCall(opts, async request => {
   return { token: await getAuth().createCustomToken(uid, { role: 'student', ...binding }) };
 });
 
+export const rotateStudentCode = onCall(opts, async request => {
+  const uid = requireTeacher(request), sid = id(request.data?.studentId, 'öğrenci kimliği'), profile = studentRef(uid, sid);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const code = newCode(), hash = codeHash(code), index = db.collection('studentCodeIndex').doc(hash);
+    const rotated = await db.runTransaction(async tx => {
+      const [studentSnap, newIndex] = await Promise.all([tx.get(profile), tx.get(index)]);
+      if (!studentSnap.exists || studentSnap.data()!.status !== 'active') throw new HttpsError('not-found', 'Etkin öğrenci bulunamadı.');
+      if (newIndex.exists) return false;
+      const oldHash = studentSnap.data()!.codeHash;
+      const oldIndex = typeof oldHash === 'string' ? db.collection('studentCodeIndex').doc(oldHash) : null;
+      if (oldIndex) await tx.get(oldIndex);
+      const credentialVersion = Number(studentSnap.data()!.credentialVersion || 1) + 1;
+      if (oldIndex) tx.delete(oldIndex);
+      tx.create(index, { teacherUid: uid, studentId: sid, credentialVersion, revoked: false });
+      tx.update(profile, { codeHash: hash, codeCipher: encryptStudentCode(code), credentialVersion });
+      return true;
+    });
+    if (rotated) return { studentId: sid, code };
+  }
+  throw new HttpsError('resource-exhausted', 'Yeni katılım kodu oluşturulamadı. Yeniden dene.');
+});
+
 export const saveTeacherTabs = onCall({ ...opts, maxInstances: 2 }, async request => {
   const uid = requireTeacher(request), tabs = request.data?.tabs;
   if (!Array.isArray(tabs) || tabs.length > 100) throw new HttpsError('invalid-argument', 'En fazla 100 TAB eşitlenebilir.');
@@ -158,7 +196,7 @@ export const teacherDashboard = onCall(opts, async request => {
   const uid = requireTeacher(request), root = teacherRoot(uid);
   const students = await root.collection('students').where('status', '==', 'active').limit(200).get();
   const summaries = students.empty ? [] : await db.getAll(...students.docs.map(s => s.ref.collection('analytics').doc('summary')));
-  return { students: students.docs.map((s, i) => ({ id: s.id, name: s.data().displayName, code: undefined,
+  return { students: students.docs.map((s, i) => ({ id: s.id, name: s.data().displayName, code: decryptStudentCode(s.data().codeCipher),
     stats: summaries[i]?.data() || { sessions: 0, seconds: 0, correct: 0, evaluated: 0, tabsWorked: 0 },
     activeTabIds: [] })) };
 });
