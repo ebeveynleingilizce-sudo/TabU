@@ -50,7 +50,7 @@ test('startup failures show a retry screen instead of leaving a blank shell', ()
 
 test('main app initializes after classroom login completes', () => {
   const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(index, /await startClassroom\(\);\s*await import\('\.\/app\/main\\.js\\?v=65'\);/);
+  assert.match(index, /await startClassroom\(\);\s*await import\('\.\/app\/main\\.js\\?v=66'\);/);
   assert.doesNotMatch(index, /if \(classroomReady !== true\)/);
 });
 
