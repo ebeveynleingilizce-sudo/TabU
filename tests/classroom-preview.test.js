@@ -35,3 +35,15 @@ test('students with assigned TABs enter the practice screen without opening the 
   assert.match(classroom, /if \(catalog\.tabs\.length\)[\s\S]*location\.hash !== '#practice'[\s\S]*launchResolver\?\.\(\)/);
 });
 
+test('teacher and student panels can share the direct app link', () => {
+  const classroom = readFileSync(new URL('../app/classroom.js', import.meta.url), 'utf8');
+  assert.match(classroom, /data-classroom-action="share-app"/);
+  assert.match(classroom, /navigator\.share\(/);
+  assert.match(classroom, /navigator\.clipboard\.writeText\(appUrl\.href\)/);
+});
+
+test('startup failures show a retry screen instead of leaving a blank shell', () => {
+  const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(index, /catch \(error\)[\s\S]*Uygulama açılamadı[\s\S]*Yeniden yükle/);
+});
+

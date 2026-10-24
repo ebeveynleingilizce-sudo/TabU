@@ -226,3 +226,5 @@
 
 .classroom-student-row>b{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.classroom-code-chip{display:inline-flex;align-items:center;padding:4px 7px;border:1px solid #514374;border-radius:7px;background:#211936;color:#d8c6ff!important;font-size:11px!important;font-weight:700}
 
+.classroom-share-button{min-height:36px;padding:7px 10px;border:1px solid #383543;border-radius:10px;background:#171620;color:#d6c5ff;font:inherit;font-size:12px;white-space:nowrap}.classroom-share-button:hover{background:#211936}
+

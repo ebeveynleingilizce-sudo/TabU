@@ -170,7 +170,7 @@ async function teacherPanel(newCode = null) {
   const detailPanel = detail ? `<section class="classroom-subpanel"><h2>${escapeHtml(detail.name)} · atanan TAB’lar</h2><div class="classroom-tab-assignments">${assignmentTabs.map(tab => `<label><input type="checkbox" data-classroom-assignment data-student-id="${escapeHtml(teacherData.selectedStudentId)}" data-tab-id="${escapeHtml(tab.id)}" ${detail.assignedTabIds.includes(tab.id) ? 'checked' : ''}><span>${escapeHtml(tab.title)}</span><small>${escapeHtml(tab.category)}</small></label>`).join('') || '<p>Henüz TAB yok.</p>'}</div><h3>Çalışılan TAB’lar</h3>${detail.tabStats.length ? detail.tabStats.map(tab => `<div class="classroom-stat-row"><b>${escapeHtml(tab.title)}</b><span>${Math.floor((tab.seconds || 0) / 60)} dk · ${tab.sessions || 0} çalışma · ${tab.notes ? Math.round((tab.correct || 0) / tab.notes * 100) : 0}% doğruluk</span></div>`).join('') : '<p class="classroom-muted">Henüz çalışma kaydı yok.</p>'}</section>` : selectedStudentId ? '<p class="classroom-muted">Öğrenci ayrıntıları şu an yüklenemedi. Ekranı açmayı deneyebilir veya yeniden seçebilirsin.</p>' : '<p class="classroom-muted">Öğrenci istatistiklerini ve TAB atamalarını görmek için öğrenciyi seç.</p>';
   const studentActions = selectedStudentId ? `<div class="classroom-panel-actions classroom-preview-action"><button class="primary-button" data-classroom-action="preview-student">Öğrenci ekranını aç</button>${selectedStudent && !selectedStudent.code ? `<button class="control-button" data-classroom-action="rotate-student-code" data-student-id="${escapeHtml(selectedStudent.id)}">Katılım kodu oluştur</button>` : ''}</div>` : '';
   gate.querySelector('.classroom-close').hidden = false;
-  gate.querySelector('[data-classroom-content]').innerHTML = `<div class="classroom-panel-heading"><div><span class="classroom-eyebrow">ÖĞRETMEN PANELİ</span><h1>Öğrencilerim</h1></div><button class="control-button" data-classroom-action="logout">Çıkış</button></div>${newCode ? `<div class="classroom-code-notice"><b>Öğrenci katılım kodu</b><strong>${escapeHtml(newCode)}</strong><small>Bu kod öğrenci adının yanında da kayıtlı kalır.</small></div>` : ''}<form class="classroom-create-student" data-classroom-form="create-student"><label>Yeni öğrenci<input name="displayName" maxlength="80" placeholder="Öğrencinin adı" required></label><button class="primary-button">＋ Öğrenci ekle</button></form><div class="classroom-roster">${roster || '<p class="classroom-muted">Henüz öğrenci yok. İlk öğrenciyi ekleyerek katılım kodu oluştur.</p>'}</div>${studentActions}${detailPanel}<div class="classroom-panel-actions"><button class="primary-button" data-classroom-action="launch">Uygulamaya geç</button><button class="control-button" data-classroom-action="logout">Çıkış yap</button></div>`;
+  gate.querySelector('[data-classroom-content]').innerHTML = `<div class="classroom-panel-heading"><div><span class="classroom-eyebrow">ÖĞRETMEN PANELİ</span><h1>Öğrencilerim</h1></div><button class="control-button" data-classroom-action="logout">Çıkış</button></div>${newCode ? `<div class="classroom-code-notice"><b>Öğrenci katılım kodu</b><strong>${escapeHtml(newCode)}</strong><small>Bu kod öğrenci adının yanında da kayıtlı kalır.</small></div>` : ''}<form class="classroom-create-student" data-classroom-form="create-student"><label>Yeni öğrenci<input name="displayName" maxlength="80" placeholder="Öğrencinin adı" required></label><button class="primary-button">＋ Öğrenci ekle</button></form><div class="classroom-roster">${roster || '<p class="classroom-muted">Henüz öğrenci yok. İlk öğrenciyi ekleyerek katılım kodu oluştur.</p>'}</div>${studentActions}${detailPanel}<div class="classroom-panel-actions"><button class="primary-button" data-classroom-action="launch">Uygulamaya geç</button><button class="control-button" data-classroom-action="share-app">↗ Uygulamayı paylaş</button><button class="control-button" data-classroom-action="logout">Çıkış yap</button></div>`;
   status('');
 }
 
@@ -180,7 +180,7 @@ function studentPanel(catalog, preview = false) {
   document.body.classList.toggle('classroom-student-mode', !preview && localStorage.getItem('tabu-classroom-role') === 'student' || preview);
   document.body.classList.toggle('classroom-teacher-preview', preview);
   gate.querySelector('.classroom-close').hidden = false;
-  gate.querySelector('[data-classroom-content]').innerHTML = `<div class="classroom-panel-heading"><div><span class="classroom-eyebrow">${preview ? 'ÖĞRENCİ ÖNİZLEMESİ' : 'ÖĞRENCİ'}</span><h1>Merhaba, ${escapeHtml(catalog.studentName)}</h1></div><button class="control-button" data-classroom-action="${preview ? 'return-teacher' : 'logout'}">${preview ? 'Öğretmen paneline dön' : 'Çıkış'}</button></div><p>${preview ? 'Bu görünüm seçili öğrencinin atamalarını gösterir. Önizleme çalışmaları ilerlemeye kaydedilmez.' : 'Yalnızca sana atanan TAB’lar listeleniyor.'}</p><div class="classroom-assigned-list">${cards || '<p class="classroom-muted">Henüz TAB atanmadı. Öğretmeninden çalışma atamasını iste.</p>'}</div><div class="classroom-panel-actions"><button class="primary-button" data-classroom-action="launch" ${teacherData?.selectedTabId ? '' : 'disabled'}>${preview ? 'Seçili TAB’ı önizle' : 'Seçili TAB ile çalış'}</button></div>`;
+  gate.querySelector('[data-classroom-content]').innerHTML = `<div class="classroom-panel-heading"><div><span class="classroom-eyebrow">${preview ? 'ÖĞRENCİ ÖNİZLEMESİ' : 'ÖĞRENCİ'}</span><h1>Merhaba, ${escapeHtml(catalog.studentName)}</h1></div><button class="control-button" data-classroom-action="${preview ? 'return-teacher' : 'logout'}">${preview ? 'Öğretmen paneline dön' : 'Çıkış'}</button></div><p>${preview ? 'Bu görünüm seçili öğrencinin atamalarını gösterir. Önizleme çalışmaları ilerlemeye kaydedilmez.' : 'Yalnızca sana atanan TAB’lar listeleniyor.'}</p><div class="classroom-assigned-list">${cards || '<p class="classroom-muted">Henüz TAB atanmadı. Öğretmeninden çalışma atamasını iste.</p>'}</div><div class="classroom-panel-actions"><button class="primary-button" data-classroom-action="launch" ${teacherData?.selectedTabId ? '' : 'disabled'}>${preview ? 'Seçili TAB’ı önizle' : 'Seçili TAB ile çalış'}</button><button class="control-button" data-classroom-action="share-app">↗ Uygulamayı paylaş</button></div>`;
   status('');
 }
 
@@ -300,6 +300,25 @@ async function handleClick(event) {
         status('Tarayıcı menüsünden “Uygulamayı yükle” veya “Ana ekrana ekle”yi seç.');
       }
     }
+    else if (action === 'share-app') {
+      const appUrl = new URL('./', location.href);
+      appUrl.search = '';
+      appUrl.hash = 'home';
+      const announce = message => {
+        status(message);
+        if (!gate?.hidden) return;
+        const toast = document.querySelector('#toast');
+        if (toast) { toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
+      };
+      if (navigator.share) {
+        try { await navigator.share({ title: 'Gitarist', text: 'Gitarist ile gitar TAB çalış.', url: appUrl.href }); announce('Paylaşım penceresi açıldı.'); }
+        catch (error) { if (error?.name !== 'AbortError') throw error; }
+      } else {
+        try { await navigator.clipboard.writeText(appUrl.href); announce('Uygulama bağlantısı panoya kopyalandı.'); }
+        catch { announce(appUrl.href); }
+      }
+    }
+    else if (action === 'reload-app') location.reload();
     else if (action === 'back') roleChoice();
     else if (action === 'hide') { gate.hidden = true; document.body.classList.remove('classroom-auth-active'); }
     else if (action === 'logout') { await api.auth.signOut(auth); location.reload(); }
@@ -433,8 +452,9 @@ export async function startClassroom() {
       catch (error) { console.warn('Çalışma özeti eşitlenemedi:', error); }
     }
   };
-  document.querySelector('.top-actions')?.insertAdjacentHTML('beforeend', '<button class="classroom-preview-return" type="button" hidden>← Öğretmene dön</button><button class="classroom-launcher" type="button" aria-label="Öğretmen ve öğrenci paneli">☰</button>');
+  document.querySelector('.top-actions')?.insertAdjacentHTML('beforeend', '<button class="classroom-preview-return" type="button" hidden>← Öğretmene dön</button><button class="classroom-share-button" type="button" data-classroom-action="share-app" aria-label="Uygulamayı paylaş">↗ Paylaş</button><button class="classroom-launcher" type="button" aria-label="Öğretmen ve öğrenci paneli">☰</button>');
   document.querySelector('.classroom-preview-return')?.addEventListener('click', closeStudentPreview);
+  document.querySelector('.classroom-share-button')?.addEventListener('click', handleClick);
   document.querySelector('.classroom-launcher')?.addEventListener('click', () => window.TabuClassroom.open());
   const toast = document.querySelector('#toast');
   if (toast) new MutationObserver(() => { if (currentRole === 'teacher' && toast.textContent.includes('TAB kaydedildi')) void syncTeacherTabsInBackground(); }).observe(toast, { childList: true, characterData: true, subtree: true });
