@@ -171,7 +171,9 @@ test('fresh worker install caches every versioned module requested by the app',a
   });
   let pending;handlers.install({waitUntil(promise){pending=promise}});await pending;
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
-  const requests=[new URL(html.match(/src="(app\/main\.js[^" ]*)"/)[1],base).href];
+  const mainEntry=html.match(/import\s*\(\s*['"](.\/app\/main\.js[^'"]*)['"]\s*\)/)||html.match(/src="(app\/main\.js[^" ]*)"/);
+  assert.ok(mainEntry,'app entry module must be discoverable for offline cache verification');
+  const requests=[new URL(mainEntry[1],base).href];
   for(const match of main.matchAll(/from\s*'([^']+\?[^']+)'/g))requests.push(new URL(match[1],base+'app/main.js').href);
   for(const request of requests)assert.ok(cached.has(request),`Missing offline module: ${request}`);
   assert.ok(cached.has(new URL('./audio/targetPitchDetector.js',base).href),'Missing offline arpeggio target detector');
