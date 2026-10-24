@@ -113,6 +113,33 @@ export const createStudent = onCall(opts, async request => {
   throw new HttpsError('resource-exhausted', 'Katılım kodu oluşturulamadı. Yeniden dene.');
 });
 
+export const deleteStudent = onCall(opts, async request => {
+  const uid = requireTeacher(request), sid = id(request.data?.studentId, 'öğrenci kimliği');
+  const profile = studentRef(uid, sid), initial = await profile.get();
+  if (!initial.exists) throw new HttpsError('not-found', 'Öğrenci bulunamadı.');
+  let versionToDelete = Number(initial.data()?.credentialVersion || 1);
+  await db.runTransaction(async tx => {
+    const current = await tx.get(profile);
+    if (!current.exists) throw new HttpsError('not-found', 'Öğrenci bulunamadı.');
+    const data = current.data()!, version = Number(data.credentialVersion || 1);
+    versionToDelete = data.status === 'deleted' ? Math.max(1, version - 1) : version;
+    if (data.status === 'deleted') return;
+    const codeHashValue = data.codeHash;
+    if (typeof codeHashValue === 'string' && codeHashValue) {
+      const codeIndex = db.collection('studentCodeIndex').doc(codeHashValue);
+      const index = await tx.get(codeIndex);
+      if (index.exists && index.data()?.teacherUid === uid && index.data()?.studentId === sid) tx.delete(codeIndex);
+    }
+    tx.update(profile, { status: 'deleted', credentialVersion: version + 1, deletedAt: FieldValue.serverTimestamp() });
+  });
+  const studentUid = `student_${codeHash(`${uid}:${sid}`).slice(0, 24)}_v${versionToDelete}`;
+  try { await getAuth().deleteUser(studentUid); }
+  catch (error) { if ((error as { code?: string })?.code !== 'auth/user-not-found') throw error; }
+  await studentSessionRef(studentUid).delete();
+  await db.recursiveDelete(profile);
+  return { ok: true };
+});
+
 export const studentLogin = onCall(opts, async request => {
   const code = typeof request.data?.code === 'string' ? request.data.code.trim().toUpperCase() : '';
   if (!/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{7}$/.test(code)) throw new HttpsError('unauthenticated', 'Katılım kodu geçersiz.');

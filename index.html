@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#090a10"><meta name="description" content="Gitarist ile gitar öğren. Ritmini bul, kendi hızında ilerle.">
-  <link rel="manifest" href="manifest.json"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192"><link rel="apple-touch-icon" href="icons/icon-180.png"><link rel="stylesheet" href="styles.css?v=31">
+  <link rel="manifest" href="manifest.json"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192"><link rel="apple-touch-icon" href="icons/icon-180.png"><link rel="stylesheet" href="styles.css?v=32">
   <title>Gitarist — Gitar öğren</title>
 </head>
 <body>
@@ -36,7 +36,7 @@
   </script>
   <script type="module">
     try {
-      const { startClassroom } = await import('./app/classroom.js?v=9');
+      const { startClassroom } = await import('./app/classroom.js?v=10');
       await startClassroom();
       await import('./app/main.js?v=66');
     } catch (error) {

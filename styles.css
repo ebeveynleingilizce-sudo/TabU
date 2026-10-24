@@ -228,3 +228,5 @@
 
 .classroom-share-button{min-height:36px;padding:7px 10px;border:1px solid #383543;border-radius:10px;background:#171620;color:#d6c5ff;font:inherit;font-size:12px;white-space:nowrap}.classroom-share-button:hover{background:#211936}
 
+
+.classroom-student-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch}.classroom-student-delete{min-width:58px;padding:8px 12px;border:1px solid #633d4d;border-radius:12px;background:#24131a;color:#ff9eac;font:inherit;cursor:pointer}.classroom-student-delete:hover{border-color:#d95771;background:#351720}.classroom-student-delete:disabled{opacity:.6;cursor:wait}

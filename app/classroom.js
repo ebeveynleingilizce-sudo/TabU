@@ -172,7 +172,7 @@ async function teacherPanel(newCode = null) {
   const assignableTabs = (api.exerciseData?.exercises || []).map(exportTab);
   const staleAssignedTabs = (detail?.assignedTabIds || []).filter(id => !localIds.has(id)).map(id => ({ id, title: `Bu cihazda bulunmayan TAB (${id})`, category: 'eski atama' }));
   const assignmentTabs = [...assignableTabs, ...staleAssignedTabs];
-  const roster = dashboard.students.map(student => `<button class="classroom-student-row ${teacherData.selectedStudentId === student.id ? 'selected' : ''}" data-classroom-action="student-detail" data-student-id="${escapeHtml(student.id)}"><b>${escapeHtml(student.name)}<span class="classroom-code-chip">${student.code ? `Kod · ${escapeHtml(student.code)}` : 'Kod yenilenmeli'}</span></b><span>${Math.floor((student.stats.seconds || 0) / 60)} dk · ${student.stats.sessions || 0} çalışma · ${student.stats.notes ? Math.round(student.stats.correct / student.stats.notes * 100) : 0}% doğruluk</span></button>`).join('');
+  const roster = dashboard.students.map(student => `<div class="classroom-student-entry"><button class="classroom-student-row ${teacherData.selectedStudentId === student.id ? 'selected' : ''}" data-classroom-action="student-detail" data-student-id="${escapeHtml(student.id)}"><b>${escapeHtml(student.name)}<span class="classroom-code-chip">${student.code ? `Kod · ${escapeHtml(student.code)}` : 'Kod yenilenmeli'}</span></b><span>${Math.floor((student.stats.seconds || 0) / 60)} dk · ${student.stats.sessions || 0} çalışma · ${student.stats.notes ? Math.round(student.stats.correct / student.stats.notes * 100) : 0}% doğruluk</span></button><button type="button" class="classroom-student-delete" data-classroom-action="delete-student" data-student-id="${escapeHtml(student.id)}" aria-label="${escapeHtml(student.name)} öğrencisini sil">Sil</button></div>`).join('');
   const selectedStudent = dashboard.students.find(student => student.id === selectedStudentId);
   const detailPanel = detail ? `<section class="classroom-subpanel"><h2>${escapeHtml(detail.name)} · atanan TAB’lar</h2><div class="classroom-tab-assignments">${assignmentTabs.map(tab => `<label><input type="checkbox" data-classroom-assignment data-student-id="${escapeHtml(teacherData.selectedStudentId)}" data-tab-id="${escapeHtml(tab.id)}" ${detail.assignedTabIds.includes(tab.id) ? 'checked' : ''}><span>${escapeHtml(tab.title)}</span><small>${escapeHtml(tab.category)}</small></label>`).join('') || '<p>Henüz TAB yok.</p>'}</div><h3>Çalışılan TAB’lar</h3>${detail.tabStats.length ? detail.tabStats.map(tab => `<div class="classroom-stat-row"><b>${escapeHtml(tab.title)}</b><span>${Math.floor((tab.seconds || 0) / 60)} dk · ${tab.sessions || 0} çalışma · ${tab.notes ? Math.round((tab.correct || 0) / tab.notes * 100) : 0}% doğruluk</span></div>`).join('') : '<p class="classroom-muted">Henüz çalışma kaydı yok.</p>'}</section>` : selectedStudentId ? '<p class="classroom-muted">Öğrenci ayrıntıları şu an yüklenemedi. Ekranı açmayı deneyebilir veya yeniden seçebilirsin.</p>' : '<p class="classroom-muted">Öğrenci istatistiklerini ve TAB atamalarını görmek için öğrenciyi seç.</p>';
   const studentActions = selectedStudentId ? `<div class="classroom-panel-actions classroom-preview-action"><button class="primary-button" data-classroom-action="preview-student">Öğrenci ekranını aç</button>${selectedStudent && !selectedStudent.code ? `<button class="control-button" data-classroom-action="rotate-student-code" data-student-id="${escapeHtml(selectedStudent.id)}">Katılım kodu oluştur</button>` : ''}</div>` : '';
@@ -338,6 +338,19 @@ async function handleClick(event) {
       await teacherPanel(result.code);
     }
     else if (action === 'student-detail') { teacherData.selectedStudentId = button.dataset.studentId; await teacherPanel(); }
+    else if (action === 'delete-student') {
+      const studentId = button.dataset.studentId;
+      const student = teacherData?.dashboard?.students?.find(item => item.id === studentId);
+      if (!student) { status('Öğrenci listede bulunamadı. Yenileyip tekrar dene.'); return; }
+      if (!window.confirm(`“${student.name}” öğrencisini silmek istiyor musun? Katılım kodu, atamaları ve istatistikleri de silinir.`)) return;
+      button.disabled = true;
+      status('Öğrenci ve kayıtları siliniyor…');
+      await call('deleteStudent', { studentId });
+      teacherData.dashboard = { ...teacherData.dashboard, students: teacherData.dashboard.students.filter(item => item.id !== studentId) };
+      if (teacherData.selectedStudentId === studentId) { teacherData.selectedStudentId = null; teacherData.detail = null; teacherData.detailStudentId = null; }
+      await teacherPanel();
+      status('Öğrenci, katılım kodu ve kayıtları silindi.');
+    }
     else if (action === 'select-tab') { teacherData.selectedTabId = button.dataset.tabId; if (currentRole === 'teacher-preview') studentPanel(teacherData.previewCatalog, true); else studentPanel(teacherData.catalog); }
     else if (action === 'launch') {
       const studentView = currentRole === 'student' || currentRole === 'teacher-preview';
@@ -363,7 +376,12 @@ function authErrorMessage(error) {
     'auth/account-exists-with-different-credential': 'Bu e-posta başka bir giriş yöntemiyle kayıtlı. E-posta ve şifreyle giriş yap.',
     'auth/email-already-in-use': 'Bu e-posta zaten kayıtlı. Giriş yapmayı dene.',
     'auth/weak-password': 'Daha güçlü bir şifre seç.',
-    'auth/invalid-credential': 'E-posta veya şifre hatalı.'
+    'auth/invalid-credential': 'E-posta veya şifre hatalı.',
+    'functions/unauthenticated': 'Öğretmen oturumu doğrulanamadı. Çıkış yapıp yeniden giriş yap.',
+    'functions/permission-denied': 'Bu işlem için öğretmen girişi gerekli. Yeniden giriş yap.',
+    'functions/unavailable': 'Sunucuya ulaşılamadı. Bağlantını kontrol edip tekrar dene.',
+    'functions/resource-exhausted': 'Öğrenci sınırına ulaşıldı veya istek sınırlandı. Biraz sonra tekrar dene.',
+    'functions/internal': 'Öğrenci işlemi sunucuda tamamlanamadı. Sayfayı yenileyip tekrar dene.'
   };
   return messages[error?.code] || error?.message || 'İşlem tamamlanamadı. Yeniden dene.';
 }
@@ -373,6 +391,9 @@ async function handleSubmit(event) {
   if (!form) return;
   event.preventDefault();
   const values = Object.fromEntries(new FormData(form));
+  const submitButton = form.querySelector('button[type="submit"], button:not([type])');
+  if (submitButton?.disabled) return;
+  if (submitButton) { submitButton.disabled = true; submitButton.dataset.originalLabel = submitButton.textContent; submitButton.textContent = form.dataset.classroomForm === 'create-student' ? 'Ekleniyor…' : submitButton.textContent; }
   try {
     status('Bağlanıyor…');
     if (form.dataset.classroomForm === 'teacher') {
@@ -384,9 +405,11 @@ async function handleSubmit(event) {
       await api.auth.signInWithCustomToken(auth, token);
     } else if (form.dataset.classroomForm === 'create-student') {
       const created = await call('createStudent', { displayName: values.displayName });
-      await teacherPanel(created.code);
+      try { await teacherPanel(created.code); }
+      catch (error) { status(`Öğrenci oluşturuldu. Katılım kodu: ${created.code}. Liste yenilenemedi: ${authErrorMessage(error)}`); }
     }
   } catch (error) { status(authErrorMessage(error)); }
+  finally { if (submitButton) { submitButton.disabled = false; if (submitButton.dataset.originalLabel) submitButton.textContent = submitButton.dataset.originalLabel; delete submitButton.dataset.originalLabel; } }
 }
 
 async function handleChange(event) {
