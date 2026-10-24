@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { assignedPreviewTabs } from '../app/classroomPreview.js';
+
+test('teacher preview includes only the selected student’s assigned TABs', () => {
+  const tabs = [
+    { id: 'solo-1', title: 'Solo 1' },
+    { id: 'arpeggio-1', title: 'Arpej 1' },
+    { id: 'solo-2', title: 'Solo 2' }
+  ];
+
+  assert.deepEqual(assignedPreviewTabs(['arpeggio-1', 'solo-2'], tabs), [tabs[1], tabs[2]]);
+  assert.deepEqual(assignedPreviewTabs([], tabs), []);
+});
+
+test('sign-in screen always offers the browser PWA install flow without downloading an APK', () => {
+  const classroom = readFileSync(new URL('../app/classroom.js', import.meta.url), 'utf8');
+  const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(classroom, /data-classroom-action="install-app">↓ Uygulamayı indir/);
+  assert.match(classroom, /promptEvent\.prompt\(\)/);
+  assert.match(classroom, /Ana Ekrana Ekle/);
+  assert.match(index, /addEventListener\('beforeinstallprompt'/);
+  assert.doesNotMatch(classroom, /\.apk/);
+});
+
+test('teacher preview button renders as soon as a student is selected, even before detail data loads', () => {
+  const classroom = readFileSync(new URL('../app/classroom.js', import.meta.url), 'utf8');
+  assert.match(classroom, /const previewAction = selectedStudentId \? `[^`]*data-classroom-action="preview-student"/);
+  assert.match(classroom, /teacherStudentDetail', \{ studentId: teacherData\.selectedStudentId \}/);
+});
+

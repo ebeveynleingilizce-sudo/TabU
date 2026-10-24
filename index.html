@@ -26,12 +26,22 @@
   </div>
   <nav class="bottom-nav" aria-label="Alt menü"><button data-route="home"><span>⌂</span>Ana Sayfa</button><button data-route="practice" class="active"><span>♫</span>TAB</button><button data-route="learn"><span>◈</span>TAB Öğren</button><button data-route="progress"><span>▥</span>İlerleme</button></nav>
   <div class="toast" id="toast" role="status"></div>
+  <script>
+    window.deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      window.deferredInstallPrompt = event;
+    });
+    window.addEventListener('appinstalled', () => { window.deferredInstallPrompt = null; });
+  </script>
   <script type="module">
-    import { startClassroom } from './app/classroom.js?v=3';
+    import { startClassroom } from './app/classroom.js?v=5';
     await startClassroom();
-    await import('./app/main.js?v=62');
+    await import('./app/main.js?v=64');
   </script>
 </body>
 </html>
+
+
 
 

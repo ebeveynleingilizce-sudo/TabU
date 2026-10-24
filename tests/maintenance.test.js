@@ -110,7 +110,7 @@ test('a stabilized onset reads the shared clock and resolves a note once',()=>{
     NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},isQualifiedGuitarOnset(){return true},
     noteUnderPlayheadAtTime,resolveNoteStatus,LIVE_PITCH_TOLERANCE_CENTS:35,lastLiveScoreAt:0,performance:{now(){return 1000}},document:{querySelector(){return {clientWidth:440}}},
     settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},updateAudioDebug(){},
-    matchNote,expectedGuitarNote,currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
+    matchNote,expectedGuitarNote,currentExercise(){return {id:'test'}},recordAnswer(){},recordPreviewAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
   vm.runInNewContext(source+'\nhandleLivePitch({level:.1,note:{midi:64,frequency:329.63},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});',context);
   observed=practiceClock.getMusicalTime();
   assert.equal(observed,1.25);assert.equal(statuses[0],'CORRECT');assert.equal(context.sessionCorrect,1);
@@ -120,7 +120,7 @@ test('arpeggio mode scores a target-frequency attack without requiring a global 
   const source=main.slice(main.indexOf('function handleLivePitch('),main.indexOf('async function toggleMic('));
   const statuses=['PENDING'],context={state:{route:'practice',running:true},liveTracking:true,practicePhase:'playing',activeTab:{mode:'arpeggio',events:[{startTime:1,notes:[{string:'A',fret:0}]}]},
     TAB_MODE:{ARPEGGIO:'arpeggio'},liveStatuses:statuses,practiceClock:new PracticeClock(),NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},
-    resolveNoteStatus,performance:{now(){return 2000}},sessionCorrect:0,currentExercise(){return {id:'arp-test'}},recordAnswer(){},setNoteFeedback(){},updateAudioDebug(){},updatePracticeStatusBoard(){},settlePracticeNotes(){return 0},canFinishLivePractice(){return false}};
+    resolveNoteStatus,performance:{now(){return 2000}},sessionCorrect:0,currentExercise(){return {id:'arp-test'}},recordAnswer(){},recordPreviewAnswer(){},setNoteFeedback(){},updateAudioDebug(){},updatePracticeStatusBoard(){},settlePracticeNotes(){return 0},canFinishLivePractice(){return false}};
   context.practiceClock.seek(1);vm.runInNewContext(source+`\nhandleLivePitch({level:.08,note:null,newOnset:false,targetAttack:{index:0,deltaDb:7.4}});`,context);
   assert.deepEqual(statuses,['CORRECT']);assert.equal(context.sessionCorrect,1);
 });
@@ -143,7 +143,7 @@ test('a note scores only while the playhead overlaps its visible number',()=>{
       MICROPHONE_CONFIG:{minRms:.012,minConfidence:.72,stableFrames:5},practiceClock,practiceClockEvents:events,
       activeTab:{events},TAB_MODE:{ARPEGGIO:'arpeggio'},liveStatuses:statuses,sessionCorrect:0,sessionWrong:0,NOTE_STATUS:{PENDING:'PENDING',CORRECT:'CORRECT',WRONG:'WRONG',MISSED:'MISSED'},
       isQualifiedGuitarOnset(){return true},noteUnderPlayheadAtTime,resolveNoteStatus,settlePracticeNotes(){return 0},canFinishLivePractice(){return false},allStatusesResolved(){return false},
-      document:{querySelector(){return {clientWidth:440}}},updateAudioDebug(){},expectedGuitarNote,matchNote,currentExercise(){return {id:'test'}},recordAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
+      document:{querySelector(){return {clientWidth:440}}},updateAudioDebug(){},expectedGuitarNote,matchNote,currentExercise(){return {id:'test'}},recordAnswer(){},recordPreviewAnswer(){},setNoteFeedback(){},updatePracticeStatusBoard(){}};
     vm.runInNewContext(source+`\nhandleLivePitch({level:.1,note:{midi:${pitch},frequency:${pitch===64?'329.63':pitch===65?'349.23':'369.99'},detectedFrequency:${pitch===64?'329.63':pitch===65?'349.23':'369.99'}},confidence:.9,stableFrames:5,newOnset:true,onsetAgeMs:0});`,context);
     return statuses;
   };
@@ -171,10 +171,13 @@ test('fresh worker install caches every versioned module requested by the app',a
   });
   let pending;handlers.install({waitUntil(promise){pending=promise}});await pending;
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
-  const mainEntry=html.match(/import\s*\(\s*['"](.\/app\/main\.js[^'"]*)['"]\s*\)/)||html.match(/src="(app\/main\.js[^" ]*)"/);
+  const mainEntry=html.match(/import\s*\(\s*['"](\.\/app\/main\.js[^'"]*)['"]\s*\)/)
+    ||html.match(/src="(app\/main\.js[^" ]*)"/);
   assert.ok(mainEntry,'app entry module must be discoverable for offline cache verification');
   const requests=[new URL(mainEntry[1],base).href];
   for(const match of main.matchAll(/from\s*'([^']+\?[^']+)'/g))requests.push(new URL(match[1],base+'app/main.js').href);
   for(const request of requests)assert.ok(cached.has(request),`Missing offline module: ${request}`);
   assert.ok(cached.has(new URL('./audio/targetPitchDetector.js',base).href),'Missing offline arpeggio target detector');
 });
+
+
