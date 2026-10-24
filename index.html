@@ -36,9 +36,9 @@
   </script>
   <script type="module">
     try {
-      const { startClassroom } = await import('./app/classroom.js?v=8');
+      const { startClassroom } = await import('./app/classroom.js?v=9');
       await startClassroom();
-      await import('./app/main.js?v=64');
+      await import('./app/main.js?v=65');
     } catch (error) {
       console.error('Gitarist açılış hatası:', error);
       const gate = document.querySelector('#classroom-gate');

@@ -56,7 +56,7 @@ function requireStudent(request: CallableRequest) {
   if (!request.auth || request.auth.token.role !== 'student') throw new HttpsError('permission-denied', 'Öğrenci girişi gerekli.');
   return request.auth.uid;
 }
-function validTab(data: unknown) {
+function validTab(data: unknown, ownerUid: string) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new HttpsError('invalid-argument', 'TAB verisi geçersiz.');
   const tab = data as Record<string, unknown>;
   const tabId = id(tab.id, 'TAB kimliği');
@@ -88,7 +88,9 @@ function validTab(data: unknown) {
     });
   }
   if (!noteCount || noteCount > 1500) throw new HttpsError('invalid-argument', 'TAB 1–1500 nota içermeli.');
-  const sanitized = { id: tabId, title, category, mode: String(tab.mode || category), bpm: Number(tab.bpm), data: normalizedData };
+  const audioPath = tab.audioPath;
+  if (audioPath !== undefined && audioPath !== null && audioPath !== '' && audioPath !== `teacher-audio/${ownerUid}/${tabId}/backing`) throw new HttpsError('invalid-argument', 'Ses dosyası yolu geçersiz.');
+  const sanitized = { id: tabId, title, category, mode: String(tab.mode || category), bpm: Number(tab.bpm), data: normalizedData, ...(typeof audioPath === 'string' && audioPath ? { audioPath } : {}) };
   if (JSON.stringify(sanitized).length > 180_000) throw new HttpsError('invalid-argument', 'TAB dosyası çok büyük.');
   return sanitized;
 }
@@ -165,7 +167,7 @@ export const rotateStudentCode = onCall(opts, async request => {
 export const saveTeacherTabs = onCall({ ...opts, maxInstances: 2 }, async request => {
   const uid = requireTeacher(request), tabs = request.data?.tabs;
   if (!Array.isArray(tabs) || tabs.length > 100) throw new HttpsError('invalid-argument', 'En fazla 100 TAB eşitlenebilir.');
-  const normalized = tabs.map(validTab), unique = new Set(normalized.map(t => t.id));
+  const normalized = tabs.map(tab => validTab(tab, uid)), unique = new Set(normalized.map(t => t.id));
   if (unique.size !== normalized.length) throw new HttpsError('invalid-argument', 'TAB kimlikleri benzersiz olmalı.');
   if (Buffer.byteLength(JSON.stringify(normalized), 'utf8') > 7_000_000) throw new HttpsError('resource-exhausted', 'TAB kitaplığı çok büyük; daha küçük gruplar halinde eşitle.');
   const batch = db.batch(), root = teacherRoot(uid);
@@ -210,7 +212,7 @@ export const teacherTabLibrary = onCall(opts, async request => {
     page = query.startAfter(after.title, after.id);
   }
   const snapshot = await page.limit(40).get(), last = snapshot.docs.at(-1);
-  return { tabs: snapshot.docs.map(row => { const tab = row.data(); return { id: row.id, title: tab.title, category: tab.category, mode: tab.mode, bpm: tab.bpm, data: tab.data }; }),
+  return { tabs: snapshot.docs.map(row => { const tab = row.data(); return { id: row.id, title: tab.title, category: tab.category, mode: tab.mode, bpm: tab.bpm, data: tab.data, audioPath: tab.audioPath || null }; }),
     nextCursor: snapshot.size === 40 && last ? { title: String(last.data().title), id: last.id } : null };
 });
 
@@ -233,7 +235,7 @@ export const studentCatalog = onCall(opts, async request => {
   if (!student.exists || student.data()!.status !== 'active' || student.data()!.credentialVersion !== binding.credentialVersion) throw new HttpsError('unauthenticated', 'Öğrenci profili artık etkin değil.');
   const tabRefs = assignments.docs.map(a => teacherRoot(binding.teacherUid).collection('tabs').doc(a.id));
   const tabs = tabRefs.length ? await db.getAll(...tabRefs) : [];
-  return { studentName: student.data()!.displayName, tabs: tabs.filter(t => t.exists).map(t => { const tab = t.data()!; return { id: t.id, title: tab.title, category: tab.category, mode: tab.mode, bpm: tab.bpm, data: tab.data }; }) };
+  return { studentName: student.data()!.displayName, tabs: tabs.filter(t => t.exists).map(t => { const tab = t.data()!; return { id: t.id, title: tab.title, category: tab.category, mode: tab.mode, bpm: tab.bpm, data: tab.data, audioPath: tab.audioPath || null }; }) };
 });
 
 export const submitPracticeSummary = onCall(opts, async request => {

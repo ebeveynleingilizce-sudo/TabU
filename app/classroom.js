@@ -4,7 +4,7 @@ import { assignedPreviewTabs } from './classroomPreview.js';
 const sdkVersion = '12.19.0';
 const sdk = name => import(`https://www.gstatic.com/firebasejs/${sdkVersion}/firebase-${name}.js`);
 const builtinIds = new Set(['open-strings', 'frets-0123', 'frets-0232', 'chromatic', 'simple-melody', 'string-switch', 'beginner-riff', 'fikrimin-ince-gulu']);
-let auth, functions, app, api, gate, currentRole = '', teacherData = null, launchResolver = null, lastSyncedTabs = '', teacherPreviewState = null;
+let auth, functions, app, api, gate, currentRole = '', teacherData = null, launchResolver = null, lastSyncedTabs = '', teacherPreviewState = null, storageApi = null, storageInstance = null;
 const call = (name, data = {}) => api.callable(name, { timeout: 30_000 })(data).then(result => result.data);
 function withTimeout(promise, timeoutMs, message) {
   let timer;
@@ -137,7 +137,7 @@ function exportTab(tab) {
       || (Number.isFinite(note.timeBeats) && !Number.isInteger(note.timeBeats))));
   const category = ['solo', 'rhythm', 'arpeggio', 'chord'].includes(tab.category)
     ? tab.category : tab.mode === 'arpeggio' ? 'arpeggio' : tab.mode === 'chord' ? 'chord' : hasTiming ? 'rhythm' : 'solo';
-  return { id: tab.id, title: tab.title, category, mode: tab.mode || category, bpm: Number(tab.bpm) || 80, data: tab.data };
+  return { id: tab.id, title: tab.title, category, mode: tab.mode || category, bpm: Number(tab.bpm) || 80, data: tab.data, ...(typeof tab.audioPath === 'string' ? { audioPath: tab.audioPath } : {}) };
 }
 
 async function saveTabsInBatches(tabs) {
@@ -454,6 +454,28 @@ export async function startClassroom() {
   window.TabuClassroom = {
     role: () => currentRole,
     syncTabs: syncTeacherTabsInBackground,
+    uploadTabAudio: async (tabId, file) => {
+      if (currentRole !== 'teacher' || !auth?.currentUser) throw new Error('Ses dosyasını yalnızca öğretmen yükleyebilir.');
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(tabId) || !file || !file.type.startsWith('audio/')) throw new Error('Ses dosyası geçersiz.');
+      if (file.size > 50 * 1024 * 1024) throw new Error('Ses dosyası en fazla 50 MB olabilir.');
+      storageApi ||= await sdk('storage');
+      storageInstance ||= storageApi.getStorage(app);
+      const path = `teacher-audio/${auth.currentUser.uid}/${tabId}/backing`;
+      await storageApi.uploadBytes(storageApi.ref(storageInstance, path), file, { contentType: file.type });
+      return path;
+    },
+    deleteTabAudio: async path => {
+      if (currentRole !== 'teacher' || !auth?.currentUser || !path.startsWith(`teacher-audio/${auth.currentUser.uid}/`)) throw new Error('Bu ses dosyasını silme yetkin yok.');
+      storageApi ||= await sdk('storage');
+      storageInstance ||= storageApi.getStorage(app);
+      await storageApi.deleteObject(storageApi.ref(storageInstance, path));
+    },
+    getTabAudioUrl: async path => {
+      if (!['student', 'teacher', 'teacher-preview'].includes(currentRole) || !/^teacher-audio\/[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9_-]{1,128}\/backing$/.test(path)) throw new Error('Bu TAB ses dosyasına erişilemiyor.');
+      storageApi ||= await sdk('storage');
+      storageInstance ||= storageApi.getStorage(app);
+      return storageApi.getDownloadURL(storageApi.ref(storageInstance, path));
+    },
     open: async () => {
       gate.classList.remove('minimized'); gate.hidden = false;
       if (currentRole === 'teacher') await teacherPanel();

@@ -1,6 +1,24 @@
 {
-  "functions": [{ "source": "functions", "codebase": "default", "runtime": "nodejs22", "predeploy": ["npm --prefix functions run build"], "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log", "*.local"] }],
-  "firestore": { "rules": "firestore.rules" },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs22",
+      "predeploy": [
+        "npm --prefix functions run build"
+      ],
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "auth": {
     "providers": {
       "emailPassword": true,
@@ -15,6 +33,23 @@
       }
     }
   },
-  "emulators": { "auth": { "port": 9099 }, "functions": { "port": 5001 }, "firestore": { "port": 8080 }, "ui": { "enabled": true, "port": 4000 }, "singleProjectMode": true }
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
 }
-

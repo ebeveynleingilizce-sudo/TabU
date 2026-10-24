@@ -1,0 +1,32 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function teacherOwnsAudio(teacherUid) {
+      return request.auth != null
+        && request.auth.uid == teacherUid
+        && request.auth.token.firebase.sign_in_provider in ['password', 'google.com'];
+    }
+
+    function assignedStudentCanRead(teacherUid, tabId) {
+      let student = /databases/(default)/documents/teachers/$(teacherUid)/students/$(request.auth.token.studentId);
+      let assignment = /databases/(default)/documents/teachers/$(teacherUid)/students/$(request.auth.token.studentId)/assignments/$(tabId);
+      return request.auth != null
+        && request.auth.token.role == 'student'
+        && request.auth.token.teacherUid == teacherUid
+        && request.auth.token.studentId is string
+        && firestore.exists(student)
+        && firestore.exists(assignment)
+        && firestore.get(student).data.status == 'active'
+        && firestore.get(student).data.credentialVersion == request.auth.token.credentialVersion
+        && firestore.get(assignment).data.active == true;
+    }
+
+    match /teacher-audio/{teacherUid}/{tabId}/backing {
+      allow read: if teacherOwnsAudio(teacherUid) || assignedStudentCanRead(teacherUid, tabId);
+      allow create, update: if teacherOwnsAudio(teacherUid)
+        && request.resource.size <= 50 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+      allow delete: if teacherOwnsAudio(teacherUid);
+    }
+  }
+}
