@@ -51,20 +51,28 @@ function validTab(data: unknown) {
   if (!tab.data || typeof tab.data !== 'object' || Array.isArray(tab.data)) throw new HttpsError('invalid-argument', 'Nota verisi geçersiz.');
   const dataByString = tab.data as Record<string, unknown>;
   const strings = ['e', 'B', 'G', 'D', 'A', 'E'];
+  const normalizedData: Record<string, unknown[]> = {};
   let noteCount = 0;
   for (const string of Object.keys(dataByString)) {
     if (!strings.includes(string) || !Array.isArray(dataByString[string])) throw new HttpsError('invalid-argument', 'Tel verisi geçersiz.');
     const notes = dataByString[string] as unknown[];
     noteCount += notes.length;
-    for (const note of notes) {
-      if (!note || typeof note !== 'object') throw new HttpsError('invalid-argument', 'Nota verisi geçersiz.');
+    normalizedData[string] = notes.map(note => {
+      // Older built-in exercises store each fret as a number; normalize those
+      // into the object form used by the editor and playback UI.
+      if (Number.isInteger(note)) {
+        if (Number(note) < 0 || Number(note) > 24) throw new HttpsError('invalid-argument', 'Perde 0–24 arasında olmalı.');
+        return { fret: Number(note) };
+      }
+      if (!note || typeof note !== 'object' || Array.isArray(note)) throw new HttpsError('invalid-argument', 'Nota verisi geçersiz.');
       const n = note as Record<string, unknown>;
       if (!Number.isInteger(n.fret) || Number(n.fret) < 0 || Number(n.fret) > 24) throw new HttpsError('invalid-argument', 'Perde 0–24 arasında olmalı.');
       for (const key of ['startTime', 'timeBeats', 'durationBeats']) if (n[key] !== undefined && (!Number.isFinite(n[key]) || Number(n[key]) < 0 || Number(n[key]) > 86400)) throw new HttpsError('invalid-argument', 'Nota zamanlaması geçersiz.');
-    }
+      return n;
+    });
   }
   if (!noteCount || noteCount > 1500) throw new HttpsError('invalid-argument', 'TAB 1–1500 nota içermeli.');
-  const sanitized = { id: tabId, title, category, mode: String(tab.mode || category), bpm: Number(tab.bpm), data: dataByString };
+  const sanitized = { id: tabId, title, category, mode: String(tab.mode || category), bpm: Number(tab.bpm), data: normalizedData };
   if (JSON.stringify(sanitized).length > 180_000) throw new HttpsError('invalid-argument', 'TAB dosyası çok büyük.');
   return sanitized;
 }
