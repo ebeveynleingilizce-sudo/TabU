@@ -5,7 +5,12 @@ const sdkVersion = '12.19.0';
 const sdk = name => import(`https://www.gstatic.com/firebasejs/${sdkVersion}/firebase-${name}.js`);
 const builtinIds = new Set(['open-strings', 'frets-0123', 'frets-0232', 'chromatic', 'simple-melody', 'string-switch', 'beginner-riff', 'fikrimin-ince-gulu']);
 let auth, functions, app, api, gate, currentRole = '', teacherData = null, launchResolver = null, lastSyncedTabs = '', teacherPreviewState = null;
-const call = (name, data = {}) => api.callable(name)(data).then(result => result.data);
+const call = (name, data = {}) => api.callable(name, { timeout: 30_000 })(data).then(result => result.data);
+function withTimeout(promise, timeoutMs, message) {
+  let timer;
+  return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), timeoutMs); })])
+    .finally(() => clearTimeout(timer));
+}
 const status = message => { const node = gate?.querySelector('[data-classroom-status]'); if (node) node.textContent = message || ''; };
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const localWorkspaceKeys = ['tabu-custom-tabs', 'tabu-tab-overrides', 'tabu-deleted-exercise-ids', 'tabu-progress-v1'];
@@ -142,6 +147,7 @@ async function saveTabsInBatches(tabs) {
 async function loadTeacherLibrary() {
   const tabs = []; let after = null;
   for (let page = 0; page < 10; page++) {
+    status(`TAB kitaplığı yükleniyor… ${page ? `${tabs.length} TAB alındı` : ''}`);
     const result = await call('teacherTabLibrary', after ? { after } : {});
     tabs.push(...result.tabs);
     if (!result.nextCursor) return tabs;
@@ -151,12 +157,13 @@ async function loadTeacherLibrary() {
 }
 
 async function teacherPanel(newCode = null) {
+  status('Öğretmen paneli hazırlanıyor…');
   await syncTeacherTabsInBackground();
   const now = Date.now(), selectedStudentId = teacherData?.selectedStudentId || null;
   const refreshDashboard = Boolean(newCode || !teacherData?.dashboard || now - (teacherData.dashboardFetchedAt || 0) > 15_000);
   const refreshDetail = Boolean(selectedStudentId && (!teacherData?.detail || teacherData.detailStudentId !== selectedStudentId || now - (teacherData.detailFetchedAt || 0) > 15_000));
   const [dashboard, detail] = await Promise.all([
-    refreshDashboard ? call('teacherDashboard') : Promise.resolve(teacherData.dashboard),
+    refreshDashboard ? (status('Öğrenci bilgileri alınıyor…'), call('teacherDashboard')) : Promise.resolve(teacherData.dashboard),
     selectedStudentId ? (refreshDetail ? call('teacherStudentDetail', { studentId: selectedStudentId }).catch(() => null) : Promise.resolve(teacherData.detail)) : Promise.resolve(null)
   ]);
   teacherData = { ...(teacherData || {}), dashboard, detail, detailStudentId: selectedStudentId,
@@ -240,6 +247,7 @@ function closeStudentPreview() {
 
 async function initializeTeacher(user) {
   currentRole = 'teacher';
+  status('Öğretmen hesabı hazırlanıyor…');
   activateWorkspace('teacher', user.uid);
   localStorage.setItem('tabu-classroom-role', 'teacher');
   const [dataModule, remoteTabs] = await Promise.all([import('./data.js?v=3'), loadTeacherLibrary()]);
@@ -251,6 +259,7 @@ async function initializeTeacher(user) {
 
 async function initializeStudent(user) {
   currentRole = 'student';
+  status('Öğrenci çalışmaları yükleniyor…');
   activateWorkspace('student', user.uid);
   localStorage.setItem('tabu-classroom-role', 'student');
   const catalog = await call('studentCatalog');
@@ -423,18 +432,23 @@ export async function startClassroom() {
   }
   auth = authSdk.getAuth(app);
   functions = functionsSdk.getFunctions(app, 'europe-west1');
-  api = { auth: authSdk, callable: name => functionsSdk.httpsCallable(functions, name), exerciseData: null };
+  api = { auth: authSdk, callable: (name, options) => functionsSdk.httpsCallable(functions, name, options), exerciseData: null };
   await new Promise((resolve, reject) => {
     launchResolver = resolve;
     authSdk.onAuthStateChanged(auth, async user => {
       try {
         if (!user) { roleChoice(); return; }
-        status('Hesap yükleniyor…');
-        const identity = await authSdk.getIdTokenResult(user, true);
+        status('Hesap doğrulanıyor…');
+        const identity = await withTimeout(authSdk.getIdTokenResult(user, true), 20_000, 'Oturum doğrulaması zaman aşımına uğradı. Bağlantını kontrol edip yeniden dene.');
         if (identity.claims.role === 'student') await initializeStudent(user);
         else await initializeTeacher(user);
         gate.hidden = !(currentRole === 'student' && teacherData?.catalog?.tabs?.length);
-      } catch (error) { status(error?.message || 'Hesap yüklenemedi.'); }
+      } catch (error) {
+        const message = authErrorMessage(error);
+        gate.querySelector('[data-classroom-content]').innerHTML = `<h1>Hesap yüklenemedi</h1><p>${escapeHtml(message)}</p><div class="classroom-role-actions"><button class="primary-button" data-classroom-action="reload-app">Yeniden dene</button><button class="control-button" data-classroom-action="logout">Giriş ekranına dön</button></div>`;
+        status('Bağlantı veya hesap bilgisi yüklemesi tamamlanmadı. Yeniden deneyebilir ya da giriş ekranına dönebilirsin.');
+        launchResolver?.();
+      }
     }, reject);
   });
   window.TabuClassroom = {
