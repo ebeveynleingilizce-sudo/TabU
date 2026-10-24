@@ -53,3 +53,8 @@ test('main app initializes after classroom login completes', () => {
   assert.match(index, /await startClassroom\(\);\s*await import\('\.\/app\/main\.js\?v=64'\);/);
   assert.doesNotMatch(index, /if \(classroomReady !== true\)/);
 });
+
+test('teacher panel remains visible after login', () => {
+  const classroom = readFileSync(new URL('../app/classroom.js', import.meta.url), 'utf8');
+  assert.match(classroom, /gate\.hidden = currentRole === 'student' && Boolean\(teacherData\?\.catalog\?\.tabs\?\.length\);/);
+});

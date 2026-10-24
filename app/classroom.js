@@ -442,7 +442,7 @@ export async function startClassroom() {
         const identity = await withTimeout(authSdk.getIdTokenResult(user, true), 20_000, 'Oturum doğrulaması zaman aşımına uğradı. Bağlantını kontrol edip yeniden dene.');
         if (identity.claims.role === 'student') await initializeStudent(user);
         else await initializeTeacher(user);
-        gate.hidden = !(currentRole === 'student' && teacherData?.catalog?.tabs?.length);
+        gate.hidden = currentRole === 'student' && Boolean(teacherData?.catalog?.tabs?.length);
       } catch (error) {
         const message = authErrorMessage(error);
         gate.querySelector('[data-classroom-content]').innerHTML = `<h1>Hesap yüklenemedi</h1><p>${escapeHtml(message)}</p><div class="classroom-role-actions"><button class="primary-button" data-classroom-action="reload-app">Yeniden dene</button><button class="control-button" data-classroom-action="logout">Giriş ekranına dön</button></div>`;
