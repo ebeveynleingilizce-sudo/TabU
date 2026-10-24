@@ -64,18 +64,18 @@ export class GuitarOnsetDetector{
 
 export class GuitarNoteOnsetTracker{
   constructor({windowMs=420}={}){this.windowMs=windowMs;this.reset()}
-  reset(){this.sequence=0;this.deliveredSequence=0;this.lastOnsetAt=null;this.lastStableMidi=null}
+  reset(){this.sequence=0;this.deliveredSequence=0;this.lastOnsetAt=null;this.lastStableMidi=null;this.lastOnsetWasPhysical=false}
   push({stableMidi=null,signal=false,physicalOnset=false,pitchChangeAt=null}={},now=performance.now()){
-    if(physicalOnset){this.sequence++;this.lastOnsetAt=now}
+    if(physicalOnset){this.sequence++;this.lastOnsetAt=now;this.lastOnsetWasPhysical=true}
     if(!signal)this.lastStableMidi=null;
     if(Number.isInteger(stableMidi)){
       // A legato fret change may have no fresh amplitude attack. Emit one
       // onset when the new pitch stabilizes, unless a physical attack is queued.
-      if(this.lastStableMidi!==null&&stableMidi!==this.lastStableMidi&&this.sequence<=this.deliveredSequence){this.sequence++;this.lastOnsetAt=Number.isFinite(pitchChangeAt)?pitchChangeAt:now}
+      if(this.lastStableMidi!==null&&stableMidi!==this.lastStableMidi&&this.sequence<=this.deliveredSequence){this.sequence++;this.lastOnsetAt=Number.isFinite(pitchChangeAt)?pitchChangeAt:now;this.lastOnsetWasPhysical=false}
       this.lastStableMidi=stableMidi
     }
     const onsetAgeMs=this.lastOnsetAt===null?Infinity:Math.max(0,now-this.lastOnsetAt),newOnset=Number.isInteger(stableMidi)&&this.sequence>this.deliveredSequence&&onsetAgeMs<=this.windowMs;
     if(newOnset)this.deliveredSequence=this.sequence;else if(onsetAgeMs>this.windowMs)this.deliveredSequence=this.sequence;
-    return {newOnset,onsetAgeMs,onsetId:this.sequence}
+    return {newOnset,onsetAgeMs,onsetId:this.sequence,physicalOnset:this.lastOnsetWasPhysical}
   }
 }
