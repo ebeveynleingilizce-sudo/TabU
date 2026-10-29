@@ -5,6 +5,15 @@
   <meta name="theme-color" content="#090a10"><meta name="description" content="Gitarist ile gitar öğren. Ritmini bul, kendi hızında ilerle.">
   <link rel="manifest" href="manifest.json"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192"><link rel="apple-touch-icon" href="icons/icon-180.png"><link rel="stylesheet" href="styles.css?v=33">
   <title>Gitarist — Gitar öğren</title>
+  <script>
+    window.deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      window.deferredInstallPrompt = event;
+    });
+    window.addEventListener('appinstalled', () => { window.deferredInstallPrompt = null; const button = document.querySelector('#install-button'); if (button) button.hidden = true; });
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(error => console.error('Service worker registration failed:', error));
+  </script>
 </head>
 <body>
   <div class="app-shell">
@@ -26,15 +35,6 @@
   </div>
   <nav class="bottom-nav" aria-label="Alt menü"><button data-route="home"><span>⌂</span>Ana Sayfa</button><button data-route="practice" class="active"><span>♫</span>TAB</button><button data-route="learn"><span>◈</span>TAB Öğren</button><button data-route="progress"><span>▥</span>İlerleme</button></nav>
   <div class="toast" id="toast" role="status"></div>
-  <script>
-    window.deferredInstallPrompt = null;
-    window.addEventListener('beforeinstallprompt', event => {
-      event.preventDefault();
-      window.deferredInstallPrompt = event;
-    });
-    window.addEventListener('appinstalled', () => { window.deferredInstallPrompt = null; const button = document.querySelector('#install-button'); if (button) button.hidden = true; });
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(error => console.error('Service worker registration failed:', error));
-  </script>
   <script type="module">
     try {
       const { startClassroom } = await import('./app/classroom.js?v=11');
