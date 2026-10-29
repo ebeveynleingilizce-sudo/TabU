@@ -32,13 +32,14 @@
       event.preventDefault();
       window.deferredInstallPrompt = event;
     });
-    window.addEventListener('appinstalled', () => { window.deferredInstallPrompt = null; });
+    window.addEventListener('appinstalled', () => { window.deferredInstallPrompt = null; const button = document.querySelector('#install-button'); if (button) button.hidden = true; });
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(error => console.error('Service worker registration failed:', error));
   </script>
   <script type="module">
     try {
       const { startClassroom } = await import('./app/classroom.js?v=11');
       await startClassroom();
-      await import('./app/main.js?v=69');
+      await import('./app/main.js?v=70');
     } catch (error) {
       console.error('Gitarist açılış hatası:', error);
       const gate = document.querySelector('#classroom-gate');
