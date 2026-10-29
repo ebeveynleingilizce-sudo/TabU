@@ -12,6 +12,42 @@ function withTimeout(promise, timeoutMs, message) {
     .finally(() => clearTimeout(timer));
 }
 const status = message => { const node = gate?.querySelector('[data-classroom-status]'); if (node) node.textContent = message || ''; };
+async function diagnoseInstallability() {
+  const problems = [];
+  let manifest;
+  try {
+    const manifestUrl = document.querySelector('link[rel="manifest"]')?.href || new URL('./manifest.json', location.href).href;
+    const response = await fetch(manifestUrl, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`manifest HTTP ${response.status}`);
+    manifest = await response.json();
+  } catch (error) {
+    problems.push(`manifest okunamadı (${error.message})`);
+  }
+  if (manifest) {
+    if (!manifest.name && !manifest.short_name) problems.push('name/short_name eksik');
+    if (!manifest.start_url) problems.push('start_url eksik');
+    if (!['standalone', 'fullscreen', 'minimal-ui'].includes(manifest.display)) problems.push('display yükleme için uygun değil');
+    for (const size of [192, 512]) {
+      const icon = manifest.icons?.find(item => String(item.sizes || '').split(/\s+/).includes(`${size}x${size}`) && (!item.purpose || item.purpose.split(/\s+/).includes('any')));
+      if (!icon) { problems.push(`${size}x${size} PNG ikon tanımı eksik`); continue; }
+      try {
+        const response = await fetch(new URL(icon.src, document.querySelector('link[rel="manifest"]')?.href || location.href), { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const bitmap = await createImageBitmap(await response.blob());
+        if (bitmap.width !== size || bitmap.height !== size) problems.push(`${size} ikonu gerçekte ${bitmap.width}x${bitmap.height}`);
+        bitmap.close?.();
+      } catch (error) {
+        problems.push(`${size} ikonu okunamadı (${error.message})`);
+      }
+    }
+  }
+  if (!window.isSecureContext) problems.push('sayfa güvenli HTTPS bağlamında değil');
+  if (problems.length) {
+    status(`Yükleme denetimi: ${problems.join(' · ')}`);
+  } else {
+    status('Manifest, HTTPS ve 192/512 ikonları uygun; ancak Chrome bu sekmede kurulum istemi vermedi. Chrome menüsündeki yükleme uyarısının ekran görüntüsü veya chrome://web-app-internals tanısı gerekiyor.');
+  }
+}
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const localWorkspaceKeys = ['tabu-custom-tabs', 'tabu-tab-overrides', 'tabu-deleted-exercise-ids', 'tabu-progress-v1'];
 
@@ -306,7 +342,7 @@ async function handleClick(event) {
       } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
         status('iPhone/iPad: Paylaş düğmesine dokun, ardından “Ana Ekrana Ekle”yi seç.');
       } else {
-        status('Tarayıcı menüsünden “Uygulamayı yükle” veya “Ana ekrana ekle”yi seç.');
+        await diagnoseInstallability();
       }
     }
     else if (action === 'share-app') {
